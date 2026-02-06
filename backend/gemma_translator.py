@@ -2,16 +2,29 @@
 Translation service using Google TranslateGemma from Hugging Face
 Supports text translation and image OCR translation
 Uses 4-bit quantization to fit in 8GB GPU (RTX 3060 Ti etc.)
+
+Bypasses HF pipeline() to call model.generate() directly for:
+- Full control over GenerationConfig (no max_length=20 conflicts)
+- Adaptive max_new_tokens (short text = fewer tokens = faster)
+- torch.inference_mode() for lower overhead
 """
 import base64
+import math
+import os
 import threading
+import time
 from io import BytesIO
-from typing import List
+from typing import List, Optional
 
 import requests
 import torch
 from PIL import Image
-from transformers import BitsAndBytesConfig, pipeline
+from transformers import (
+    AutoModelForImageTextToText,
+    AutoProcessor,
+    BitsAndBytesConfig,
+    GenerationConfig,
+)
 
 # Model selection
 MODEL_NAME = "google/translategemma-4b-it"
@@ -19,7 +32,7 @@ MODEL_NAME = "google/translategemma-4b-it"
 # Language codes supported by TranslateGemma
 SUPPORTED_LANGUAGES = {
     "ar": "Arabic",
-    "vi": "Vietnamese", 
+    "vi": "Vietnamese",
     "en": "English",
     "de-DE": "German",
     "cs": "Czech",
@@ -37,148 +50,264 @@ SUPPORTED_LANGUAGES = {
     "th": "Thai",
 }
 
+
 class GemmaTranslationService:
     def __init__(self):
         torch_version = torch.__version__
         print(f"[Gemma] PyTorch version: {torch_version}")
-        
+
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         print(f"[Gemma] Using device: {self.device}")
-        
+
         if self.device == "cuda":
-            vram_gb = round(torch.cuda.get_device_properties(0).total_memory / 1024**3, 1)
+            vram_gb = round(
+                torch.cuda.get_device_properties(0).total_memory / 1024**3, 1
+            )
             gpu_name = torch.cuda.get_device_name(0)
             print(f"[Gemma] GPU: {gpu_name} ({vram_gb} GB VRAM)")
-            
-            # Determine quantization based on VRAM
-            # NVIDIA A4000 has 16GB VRAM - perfect for float16 without quantization
+
             if vram_gb < 12:
-                print(f"[Gemma] VRAM < 12GB -> Using 4-bit quantization (NF4)")
+                print("[Gemma] VRAM < 12GB -> Using 4-bit quantization (NF4)")
                 self._use_quantization = "4bit"
             elif vram_gb < 16:
-                print(f"[Gemma] VRAM < 16GB -> Using 8-bit quantization")
+                print("[Gemma] VRAM < 16GB -> Using 8-bit quantization")
                 self._use_quantization = "8bit"
             else:
-                print(f"[Gemma] VRAM >= 16GB -> Using float16 (no quantization, optimal performance)")
+                print("[Gemma] VRAM >= 16GB -> Using float16 (no quantization)")
                 self._use_quantization = None
         else:
             self._use_quantization = None
-            
+
         print(f"[Gemma] Model: {MODEL_NAME}")
-        self._pipe = None
-        self._pipeline_init_lock = threading.Lock()
-        # Single GPU lock for all requests (CSV/text/image)
+        self._model: Optional[AutoModelForImageTextToText] = None
+        self._processor: Optional[AutoProcessor] = None
+        self._gen_config: Optional[GenerationConfig] = None
+        self._init_lock = threading.Lock()
         self._gpu_lock = threading.Lock()
 
-    def _get_pipeline(self):
-        """Lazy load pipeline with appropriate quantization for GPU VRAM"""
-        if self._pipe is None:
-            with self._pipeline_init_lock:
-                if self._pipe is not None:
-                    return self._pipe
+    # ------------------------------------------------------------------
+    # Model loading
+    # ------------------------------------------------------------------
+    def _load_model(self):
+        """Load model + processor directly (no pipeline wrapper)."""
+        if self._model is not None:
+            return
+        with self._init_lock:
+            if self._model is not None:
+                return
 
-                print(f"[Gemma] Loading {MODEL_NAME}...")
-                print("[Gemma] This may take a few minutes on first load...")
+            print(f"[Gemma] Loading {MODEL_NAME}...")
+            print("[Gemma] This may take a few minutes on first load...")
 
-                # Check for offline mode
-                import os
+            offline_mode = (
+                os.environ.get("HF_HUB_OFFLINE", "false").lower() == "true"
+                or os.environ.get("TRANSFORMERS_OFFLINE", "false").lower() == "true"
+            )
+            if offline_mode:
+                print("[Gemma] Offline mode detected - using local cache only")
 
-                offline_mode = os.environ.get("HF_HUB_OFFLINE", "false").lower() == "true" or \
-                              os.environ.get("TRANSFORMERS_OFFLINE", "false").lower() == "true"
+            token = os.environ.get("HF_TOKEN")
+            if not token:
+                print(
+                    "[Gemma] Warning: HF_TOKEN not found. "
+                    "Model download may fail if gated."
+                )
 
+            common = {}
+            if token:
+                common["token"] = token
+            if offline_mode:
+                common["local_files_only"] = True
+
+            # --- Processor ---
+            self._processor = AutoProcessor.from_pretrained(
+                MODEL_NAME, **common
+            )
+
+            # --- Model ---
+            model_kwargs = {**common}
+            if self._use_quantization == "4bit":
+                model_kwargs["quantization_config"] = BitsAndBytesConfig(
+                    load_in_4bit=True,
+                    bnb_4bit_compute_dtype=torch.float16,
+                    bnb_4bit_quant_type="nf4",
+                    bnb_4bit_use_double_quant=True,
+                )
+                model_kwargs["device_map"] = "auto"
+                print("[Gemma] Loading with 4-bit NF4 quantization...")
+            elif self._use_quantization == "8bit":
+                model_kwargs["quantization_config"] = BitsAndBytesConfig(
+                    load_in_8bit=True,
+                )
+                model_kwargs["device_map"] = "auto"
+                print("[Gemma] Loading with 8-bit quantization...")
+            else:
+                model_kwargs["device_map"] = "auto"
+                model_kwargs["torch_dtype"] = torch.float16
+                print("[Gemma] Loading with float16 (no quantization)...")
+
+            try:
+                self._model = AutoModelForImageTextToText.from_pretrained(
+                    MODEL_NAME, **model_kwargs
+                )
+            except Exception as e:
+                print(f"[Gemma] GPU load failed: {e}")
                 if offline_mode:
-                    print("[Gemma] Offline mode detected - using local cache only")
+                    raise RuntimeError(
+                        "Offline mode enabled but model cache incomplete."
+                    ) from e
+                print("[Gemma] Trying CPU fallback...")
+                self._model = AutoModelForImageTextToText.from_pretrained(
+                    MODEL_NAME,
+                    device_map="cpu",
+                    torch_dtype=torch.float32,
+                    **({"token": token} if token else {}),
+                    local_files_only=offline_mode,
+                )
 
-                # Get token from environment
-                token = os.environ.get("HF_TOKEN")
-                if not token:
-                    print("[Gemma] Warning: HF_TOKEN not found in environment. Model download may fail if gated.")
+            # Build a clean GenerationConfig template (no max_length!)
+            eos = getattr(self._model.config, "eos_token_id", 1)
+            if not isinstance(eos, int):
+                eos = eos[0] if isinstance(eos, (list, tuple)) and eos else 1
+            self._gen_config = GenerationConfig(
+                do_sample=False,
+                pad_token_id=eos,
+            )
 
-                model_kwargs = {}
-                if token:
-                    model_kwargs["token"] = token
+            print("[Gemma] Model loaded successfully!")
 
-                if offline_mode:
-                    model_kwargs["local_files_only"] = True
-                    # Also prevent any hub access during pipeline component resolution
-                    model_kwargs["proxies"] = None
+    def _ensure_loaded(self):
+        if self._model is None:
+            self._load_model()
 
-                if self._use_quantization == "4bit":
-                    # 4-bit quantization: ~2.5GB VRAM for 4B model
-                    quantization_config = BitsAndBytesConfig(
-                        load_in_4bit=True,
-                        bnb_4bit_compute_dtype=torch.float16,
-                        bnb_4bit_quant_type="nf4",
-                        bnb_4bit_use_double_quant=True,
-                    )
-                    model_kwargs["quantization_config"] = quantization_config
-                    model_kwargs["device_map"] = "auto"
-                    print("[Gemma] Loading with 4-bit NF4 quantization...")
+    # ------------------------------------------------------------------
+    # Core inference  (NO pipeline, direct model.generate)
+    # ------------------------------------------------------------------
+    @torch.inference_mode()
+    def _generate_text(self, messages: list, max_new_tokens: int) -> str:
+        """Translate a single conversation (single text)."""
+        results = self._generate_text_batch([messages], max_new_tokens)
+        return results[0]
 
-                elif self._use_quantization == "8bit":
-                    # 8-bit quantization: ~4GB VRAM for 4B model
-                    quantization_config = BitsAndBytesConfig(
-                        load_in_8bit=True,
-                    )
-                    model_kwargs["quantization_config"] = quantization_config
-                    model_kwargs["device_map"] = "auto"
-                    print("[Gemma] Loading with 8-bit quantization...")
+    @torch.inference_mode()
+    def _generate_text_batch(
+        self, messages_list: List[list], max_new_tokens: int
+    ) -> List[str]:
+        """Translate multiple texts in ONE GPU forward pass (true batching).
 
-                else:
-                    # No quantization: ~8GB VRAM for 4B model in float16
-                    model_kwargs["device_map"] = "auto"
-                    model_kwargs["dtype"] = torch.float16
-                    print("[Gemma] Loading with float16 (no quantization)...")
-
-                try:
-                    self._pipe = pipeline(
-                        "image-text-to-text",
-                        model=MODEL_NAME,
-                        **model_kwargs,
-                    )
-                    print("[Gemma] Model loaded successfully!")
-                except Exception as e:
-                    print(f"[Gemma] Failed to load model: {e}")
-                    # If offline or gated, CPU fallback will still fail if cache is incomplete.
-                    # In that case, raise a clear error so the API can report it.
-                    if offline_mode:
-                        raise RuntimeError(
-                            "Offline mode is enabled but the model cache is incomplete (or the repo is gated). "
-                            "You must download ALL model files while authenticated, then run offline with local cache."
-                        ) from e
-
-                    print("[Gemma] Trying CPU fallback...")
-                    # Fallback to CPU
-                    self._pipe = pipeline(
-                        "image-text-to-text",
-                        model=MODEL_NAME,
-                        device="cpu",
-                        dtype=torch.float32,
-                        token=token,
-                        local_files_only=offline_mode,
-                    )
-                    print("[Gemma] Model loaded on CPU (slower but works)")
-
-        return self._pipe
-
-    def _run_pipe(self, messages, max_new_tokens: int):
-        """Run model inference through a single global lock for 1-GPU stability."""
-        pipe = self._get_pipeline()
+        1. apply_chat_template on each conversation -> list of prompt strings
+        2. Batch-tokenize with left-padding (required for generate())
+        3. Single model.generate() call -> all outputs at once
+        4. Decode each output, stripping input tokens
+        """
+        self._ensure_loaded()
         with self._gpu_lock:
-            return pipe(text=messages, max_new_tokens=max_new_tokens)
+            # Step 1: Get prompt strings via chat template
+            prompts: List[str] = []
+            for messages in messages_list:
+                prompt_str = self._processor.apply_chat_template(
+                    messages,
+                    add_generation_prompt=True,
+                    tokenize=False,  # return string, not tokens
+                )
+                prompts.append(prompt_str)
 
-    @staticmethod
-    def _extract_generated_content(output_item: dict) -> str:
-        generated_text = output_item.get("generated_text")
-        if isinstance(generated_text, list) and generated_text:
-            last_message = generated_text[-1]
-            if isinstance(last_message, dict):
-                return str(last_message.get("content", ""))
-            return str(last_message)
-        if isinstance(generated_text, str):
-            return generated_text
-        return ""
+            tokenizer = self._processor.tokenizer
 
+            # Step 2: Batch-tokenize with LEFT padding (needed for generate)
+            original_side = tokenizer.padding_side
+            original_pad = tokenizer.pad_token_id
+            tokenizer.padding_side = "left"
+            if tokenizer.pad_token_id is None:
+                tokenizer.pad_token_id = self._gen_config.pad_token_id
+
+            try:
+                batch_enc = tokenizer(
+                    prompts,
+                    return_tensors="pt",
+                    padding=True,
+                    truncation=False,
+                )
+            finally:
+                tokenizer.padding_side = original_side
+                tokenizer.pad_token_id = original_pad
+
+            # Move to model device
+            batch_enc = {
+                k: v.to(self._model.device) if hasattr(v, "to") else v
+                for k, v in batch_enc.items()
+            }
+
+            # Track each sequence's real (non-padded) length
+            # With left-padding, real tokens are at the RIGHT end.
+            attention_mask = batch_enc["attention_mask"]
+            input_lengths = attention_mask.sum(dim=1).tolist()
+
+            # Step 3: Single generate() call for the whole batch
+            gen_config = GenerationConfig(
+                max_new_tokens=max_new_tokens,
+                do_sample=False,
+                pad_token_id=self._gen_config.pad_token_id,
+            )
+
+            output_ids = self._model.generate(
+                **batch_enc, generation_config=gen_config
+            )
+
+            # Step 4: Decode each output, slicing off input tokens
+            total_len = batch_enc["input_ids"].shape[-1]  # padded length
+            results: List[str] = []
+            for i in range(len(prompts)):
+                # All sequences were padded to total_len.  Generated tokens
+                # start right after total_len in the output.
+                new_ids = output_ids[i, total_len:]
+                text = self._processor.decode(
+                    new_ids, skip_special_tokens=True
+                )
+                results.append(text)
+
+            return results
+
+    @torch.inference_mode()
+    def _generate_from_image(
+        self, messages: list, images: list, max_new_tokens: int
+    ) -> str:
+        """Same as _generate_text but with image inputs."""
+        self._ensure_loaded()
+        with self._gpu_lock:
+            inputs = self._processor.apply_chat_template(
+                messages,
+                add_generation_prompt=True,
+                tokenize=True,
+                return_dict=True,
+                return_tensors="pt",
+            )
+            # Process images
+            image_inputs = self._processor.image_processor(
+                images=images, return_tensors="pt"
+            )
+            inputs.update(image_inputs)
+
+            inputs = {
+                k: v.to(self._model.device) if hasattr(v, "to") else v
+                for k, v in inputs.items()
+            }
+
+            input_len = inputs["input_ids"].shape[-1]
+
+            gen_config = GenerationConfig(
+                max_new_tokens=max_new_tokens,
+                do_sample=False,
+                pad_token_id=self._gen_config.pad_token_id,
+            )
+
+            output_ids = self._model.generate(**inputs, generation_config=gen_config)
+            new_ids = output_ids[0, input_len:]
+            return self._processor.decode(new_ids, skip_special_tokens=True)
+
+    # ------------------------------------------------------------------
+    # Helpers
+    # ------------------------------------------------------------------
     @staticmethod
     def _build_text_message(text: str, source_lang: str, target_lang: str):
         return [
@@ -195,57 +324,72 @@ class GemmaTranslationService:
             }
         ]
 
+    @staticmethod
+    def _estimate_max_tokens(text: str, default: int = 256) -> int:
+        """Estimate max_new_tokens based on input length.
+
+        Translation typically produces output of similar length.
+        For short CSV cells we can use much fewer tokens than 256.
+        """
+        if not text:
+            return 32
+        # ~1 token per 3-4 chars; output ~1.5x input length; minimum 32
+        estimated = max(32, int(len(text) / 3 * 1.5))
+        return min(estimated, default)
+
     def _reset_cuda(self):
-        """Reset CUDA state after error"""
         if self.device == "cuda":
             try:
                 torch.cuda.empty_cache()
                 torch.cuda.synchronize()
             except Exception:
                 pass
-    
+
+    # ------------------------------------------------------------------
+    # Public API
+    # ------------------------------------------------------------------
     def translate_text(
-        self, 
-        text: str, 
-        source_lang: str = "ar", 
+        self,
+        text: str,
+        source_lang: str = "ar",
         target_lang: str = "vi",
-        max_new_tokens: int = 256
+        max_new_tokens: int = 256,
     ) -> str:
-        """Translate text from source language to target language"""
+        """Translate a single text string."""
         if not text or not text.strip():
             return ""
 
+        adaptive_tokens = self._estimate_max_tokens(text, max_new_tokens)
         messages = self._build_text_message(text, source_lang, target_lang)
 
         try:
-            output = self._run_pipe(messages, max_new_tokens=max_new_tokens)
-            if isinstance(output, dict):
-                output = [output]
-            if not output:
-                return ""
-            return self._extract_generated_content(output[0])
+            t0 = time.perf_counter()
+            result = self._generate_text(messages, max_new_tokens=adaptive_tokens)
+            elapsed = time.perf_counter() - t0
+            print(
+                f"[Gemma] translate: {elapsed:.2f}s  "
+                f"max_tok={adaptive_tokens}  in={len(text)} chars"
+            )
+            return result
         except RuntimeError as e:
             error_msg = str(e)
             print(f"[Gemma] CUDA/Runtime error: {error_msg}")
             self._reset_cuda()
-            
-            # Try again with smaller max_new_tokens
             if "CUDA" in error_msg or "out of memory" in error_msg.lower():
                 try:
                     print("[Gemma] Retrying with reduced tokens...")
-                    output = self._run_pipe(messages, max_new_tokens=min(max_new_tokens, 64))
-                    return self._extract_generated_content(output[0])
+                    return self._generate_text(
+                        messages, max_new_tokens=min(adaptive_tokens, 64)
+                    )
                 except Exception:
                     self._reset_cuda()
                     return f"[Error: GPU memory insufficient. Text: {text[:50]}...]"
-            
             return f"[Error: {error_msg}]"
         except Exception as e:
-            error_msg = str(e)
-            print(f"[Gemma] Translation error: {error_msg}")
+            print(f"[Gemma] Translation error: {e}")
             self._reset_cuda()
-            return f"[Error: {error_msg}]"
-    
+            return f"[Error: {e}]"
+
     def translate_batch(
         self,
         texts: List[str],
@@ -255,14 +399,29 @@ class GemmaTranslationService:
         batch_size: int = 4,
         max_new_tokens: int = 256,
     ) -> List[str]:
-        """Translate texts using micro-batching with safe per-item fallback."""
+        """Translate list of texts with TRUE GPU batching.
+
+        - Deduplicates identical texts
+        - Groups unique texts into batches of `batch_size`
+        - Each batch = 1 GPU forward pass (e.g. 4 texts at once)
+        - Falls back to per-item mode on OOM
+        """
         total = len(texts)
         if total == 0:
             return []
 
         batch_size = max(1, int(batch_size))
+
+        def _percent(done: int, overall: int) -> int:
+            if overall <= 0:
+                return 100
+            if done >= overall:
+                return 100
+            return max(1, min(99, math.ceil((done * 100) / overall)))
+
         results = [""] * total
 
+        # Deduplicate
         text_to_positions = {}
         for idx, text in enumerate(texts):
             if not text or not str(text).strip():
@@ -271,57 +430,98 @@ class GemmaTranslationService:
 
         if not text_to_positions:
             if progress_callback:
-                progress_callback(100, 100)
+                progress_callback(100, total)
             return results
 
         unique_texts = list(text_to_positions.keys())
+        unique_total = len(unique_texts)
         processed_items = 0
+        batch_start_time = time.perf_counter()
 
-        for start in range(0, len(unique_texts), batch_size):
-            batch_texts = unique_texts[start : start + batch_size]
-            batch_messages = [
-                self._build_text_message(text, source_lang, target_lang)
-                for text in batch_texts
+        if progress_callback:
+            progress_callback(0, 0)
+
+        print(
+            f"[Gemma] Batch: {total} rows, {unique_total} unique, "
+            f"batch_size={batch_size}"
+        )
+
+        # Process in chunks of batch_size
+        for start in range(0, unique_total, batch_size):
+            chunk_texts = unique_texts[start : start + batch_size]
+            chunk_messages = [
+                self._build_text_message(t, source_lang, target_lang)
+                for t in chunk_texts
             ]
+            # Use max adaptive tokens across the chunk (generate uses one limit)
+            chunk_max_tokens = max(
+                self._estimate_max_tokens(t, max_new_tokens) for t in chunk_texts
+            )
 
-            translated_batch: List[str] = []
+            translated_chunk: List[str] = []
             try:
-                batch_output = self._run_pipe(batch_messages, max_new_tokens=max_new_tokens)
-                if isinstance(batch_output, dict):
-                    batch_output = [batch_output]
-                translated_batch = [
-                    self._extract_generated_content(output_item)
-                    for output_item in batch_output
-                ]
-                if len(translated_batch) != len(batch_texts):
-                    raise RuntimeError("Unexpected batch output size")
-            except Exception as batch_error:
-                print(f"[Gemma] Batch inference failed, fallback to per-item mode: {batch_error}")
-                translated_batch = [
-                    self.translate_text(
-                        text,
-                        source_lang=source_lang,
-                        target_lang=target_lang,
-                        max_new_tokens=max_new_tokens,
-                    )
-                    for text in batch_texts
-                ]
+                t0 = time.perf_counter()
+                translated_chunk = self._generate_text_batch(
+                    chunk_messages, max_new_tokens=chunk_max_tokens
+                )
+                elapsed = time.perf_counter() - t0
+                print(
+                    f"[Gemma] batch[{start+1}-{start+len(chunk_texts)}/{unique_total}] "
+                    f"{elapsed:.2f}s  x{len(chunk_texts)} texts  "
+                    f"max_tok={chunk_max_tokens}"
+                )
+            except RuntimeError as e:
+                error_msg = str(e)
+                print(
+                    f"[Gemma] Batch GPU error: {error_msg} "
+                    f"-> falling back to per-item"
+                )
+                self._reset_cuda()
+                # Fallback: translate one by one
+                for text in chunk_texts:
+                    try:
+                        adaptive = self._estimate_max_tokens(text, max_new_tokens)
+                        msgs = self._build_text_message(
+                            text, source_lang, target_lang
+                        )
+                        result = self._generate_text(msgs, max_new_tokens=adaptive)
+                        translated_chunk.append(result)
+                    except Exception:
+                        self._reset_cuda()
+                        translated_chunk.append("[Error: GPU memory insufficient]")
+            except Exception as e:
+                print(f"[Gemma] Batch error: {e} -> falling back to per-item")
+                self._reset_cuda()
+                for text in chunk_texts:
+                    try:
+                        adaptive = self._estimate_max_tokens(text, max_new_tokens)
+                        msgs = self._build_text_message(
+                            text, source_lang, target_lang
+                        )
+                        result = self._generate_text(msgs, max_new_tokens=adaptive)
+                        translated_chunk.append(result)
+                    except Exception:
+                        self._reset_cuda()
+                        translated_chunk.append(f"[Error: {e}]")
 
-            for text, translated_text in zip(batch_texts, translated_batch):
-                positions = text_to_positions[text]
-                for position in positions:
-                    results[position] = translated_text
-                processed_items += len(positions)
+            # Write results back
+            for text, translated_text in zip(chunk_texts, translated_chunk):
+                for pos in text_to_positions[text]:
+                    results[pos] = translated_text
+                    processed_items += 1
+                    if progress_callback:
+                        progress_callback(
+                            _percent(processed_items, total), processed_items
+                        )
 
-            if progress_callback:
-                progress = int((processed_items / total) * 100)
-                progress_callback(progress, 100)
-
-            if processed_items % 10 == 0 or processed_items == total:
-                print(f"[Gemma] Translated {processed_items}/{total}")
-
+        total_elapsed = time.perf_counter() - batch_start_time
+        avg = total_elapsed / unique_total if unique_total else 0
+        print(
+            f"[Gemma] Done: {unique_total} unique in {total_elapsed:.1f}s "
+            f"(avg {avg:.2f}s/text, batch_size={batch_size})"
+        )
         return results
-    
+
     def translate_image(
         self,
         image_source: str,
@@ -331,55 +531,38 @@ class GemmaTranslationService:
         max_image_side: int = 1024,
         jpeg_quality: int = 90,
     ) -> str:
-        """Extract and translate text from an image"""
-        def _resize_image_bytes(image_bytes: bytes) -> bytes:
-            """
-            Resize image keeping aspect ratio so that max(width, height) <= max_image_side.
-            Returns JPEG bytes.
-            """
+        """Extract and translate text from an image."""
+
+        def _resize(image_bytes: bytes) -> bytes:
             with Image.open(BytesIO(image_bytes)) as im:
                 im = im.convert("RGB")
                 w, h = im.size
-                if max(w, h) <= max_image_side:
-                    out = BytesIO()
-                    im.save(out, format="JPEG", quality=jpeg_quality, optimize=True)
-                    return out.getvalue()
-
-                if w >= h:
-                    new_w = max_image_side
-                    new_h = int(h * (max_image_side / w))
-                else:
-                    new_h = max_image_side
-                    new_w = int(w * (max_image_side / h))
-
-                im = im.resize((new_w, new_h), Image.BICUBIC)
+                if max(w, h) > max_image_side:
+                    if w >= h:
+                        new_w = max_image_side
+                        new_h = int(h * (max_image_side / w))
+                    else:
+                        new_h = max_image_side
+                        new_w = int(w * (max_image_side / h))
+                    im = im.resize((new_w, new_h), Image.BICUBIC)
                 out = BytesIO()
                 im.save(out, format="JPEG", quality=jpeg_quality, optimize=True)
                 return out.getvalue()
 
-        # Normalize input into a resized data URL when possible (faster + more stable)
+        # Load + resize image
         try:
             if image_source.startswith(("http://", "https://")):
-                # Download then resize (may require internet for remote URLs)
                 resp = requests.get(image_source, timeout=30)
                 resp.raise_for_status()
-                resized_bytes = _resize_image_bytes(resp.content)
-                b64 = base64.b64encode(resized_bytes).decode("utf-8")
-                image_data = {"url": f"data:image/jpeg;base64,{b64}"}
+                raw_bytes = resp.content
             else:
-                # Base64 -> bytes -> resize -> base64
                 raw_bytes = base64.b64decode(image_source)
-                resized_bytes = _resize_image_bytes(raw_bytes)
-                b64 = base64.b64encode(resized_bytes).decode("utf-8")
-                image_data = {"url": f"data:image/jpeg;base64,{b64}"}
+            resized = _resize(raw_bytes)
+            pil_image = Image.open(BytesIO(resized)).convert("RGB")
         except Exception as e:
-            # If resizing fails, fallback to original input
-            print(f"[Gemma] Warning: image resize failed, using original input. Error: {e}")
-            if image_source.startswith(("http://", "https://")):
-                image_data = {"url": image_source}
-            else:
-                image_data = {"url": f"data:image/jpeg;base64,{image_source}"}
-        
+            print(f"[Gemma] Image load/resize failed: {e}")
+            return f"[Error: could not load image: {e}]"
+
         messages = [
             {
                 "role": "user",
@@ -388,33 +571,33 @@ class GemmaTranslationService:
                         "type": "image",
                         "source_lang_code": source_lang,
                         "target_lang_code": target_lang,
-                        **image_data
                     },
                 ],
             }
         ]
-        
-        try:
-            output = self._run_pipe(messages, max_new_tokens=max_new_tokens)
-            if isinstance(output, dict):
-                output = [output]
-            if not output:
-                return ""
-            return self._extract_generated_content(output[0])
-        except Exception as e:
-            error_msg = str(e)
-            print(f"[Gemma] Image translation error: {error_msg}")
-            self._reset_cuda()
-            return f"[Error: {error_msg}]"
 
-# Global instance (lazy loaded)
+        try:
+            return self._generate_from_image(
+                messages, [pil_image], max_new_tokens=max_new_tokens
+            )
+        except Exception as e:
+            print(f"[Gemma] Image translation error: {e}")
+            self._reset_cuda()
+            return f"[Error: {e}]"
+
+
+# ------------------------------------------------------------------
+# Singleton
+# ------------------------------------------------------------------
 _gemma_translator = None
+
 
 def get_gemma_translator() -> GemmaTranslationService:
     global _gemma_translator
     if _gemma_translator is None:
         _gemma_translator = GemmaTranslationService()
     return _gemma_translator
+
 
 def get_supported_languages():
     """Return dict of supported language codes and names"""

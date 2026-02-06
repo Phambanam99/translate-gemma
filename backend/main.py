@@ -177,11 +177,18 @@ def _process_translation_sync(
             job_id,
             total=total,
             method=effective_method,
+            processed=0,
             message=f"Đang dịch {total} dòng với {effective_method.upper()}...",
         )
 
-        def update_progress(progress: int, _total: int) -> None:
-            _update_job(job_id, progress=progress)
+        def update_progress(progress: int, processed: int) -> None:
+            processed_count = max(0, min(processed, total))
+            _update_job(
+                job_id,
+                progress=max(0, min(progress, 100)),
+                processed=processed_count,
+                message=f"Đang dịch {processed_count}/{total} dòng với {effective_method.upper()}...",
+            )
 
         translator = get_gemma_translator()
         translated = translator.translate_batch(
@@ -200,6 +207,7 @@ def _process_translation_sync(
             job_id,
             status="completed",
             progress=100,
+            processed=total,
             message="Hoàn thành!",
             output_file=output_path,
             queue_position=0,
@@ -228,6 +236,7 @@ async def _csv_worker_loop() -> None:
                 job_id,
                 status="processing",
                 progress=0,
+                processed=0,
                 queue_position=0,
                 message="Đang chuẩn bị dữ liệu để dịch...",
             )
@@ -280,7 +289,7 @@ async def startup_event():
     # - In offline mode, if cache is incomplete, preloading would crash the whole server.
     print("TranslateGemma 4B: Loading...")
     try:
-        await asyncio.to_thread(lambda: get_gemma_translator()._get_pipeline())
+        await asyncio.to_thread(lambda: get_gemma_translator()._ensure_loaded())
         print("TranslateGemma 4B: Ready!")
     except Exception as e:
         print("=" * 60)
@@ -367,6 +376,7 @@ async def upload_csv(
     job_state = {
         "status": "queued",
         "progress": 0,
+        "processed": 0,
         "total": 0,
         "message": "Đã nhận file, đang chờ đến lượt xử lý GPU...",
         "output_file": None,
