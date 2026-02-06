@@ -1,0 +1,32 @@
+# Core dependencies
+fastapi
+uvicorn[standard]
+transformers
+sentencepiece
+pandas
+python-multipart
+aiofiles
+Pillow
+accelerate
+requests
+sacremoses
+packaging
+huggingface_hub
+
+# PyTorch - Install separately based on your system:
+# 
+# For CUDA 12.4 (Windows/Linux):
+#   pip install torch==2.6.0+cu124 torchvision==0.21.0+cu124 torchaudio==2.6.0+cu124 --index-url https://download.pytorch.org/whl/cu124
+#
+# For CPU only:
+#   pip install torch==2.6.0 torchvision==0.21.0 torchaudio==2.6.0
+#
+# Note: The versions below are placeholders. Install PyTorch separately first!
+torch>=2.6.0
+torchaudio>=2.6.0
+torchvision>=0.21.0
+
+# Quantization (optional, for GPU memory optimization)
+# bitsandbytes - Only works on Linux, install separately if needed:
+#   pip install bitsandbytes
+# On Windows, model will auto-fallback to CPU or float16

@@ -1,0 +1,39 @@
+# Workspace/editor
+.agent/
+.vscode/
+
+# Python caches
+**/__pycache__/
+*.py[cod]
+
+# Environment files
+**/.env
+**/.my-env/
+**/venv/
+**/env/
+
+# Frontend artifacts
+**/node_modules/
+**/dist/
+**/dist-ssr/
+
+# Backend runtime artifacts
+backend/uploads/
+backend/outputs/
+csv-translator-offline-20260206/backend/uploads/
+csv-translator-offline-20260206/backend/outputs/
+
+# Offline package bundle and model cache
+csv-translator-offline-20260206/
+
+# Local data files
+Thuraya-CSV-Export 04.02.csv
+
+# LaTeX build artifacts
+docs/*.pdf
+docs/*.synctex.gz
+docs/*.aux
+docs/*.log
+docs/*.out
+docs/*.toc
+

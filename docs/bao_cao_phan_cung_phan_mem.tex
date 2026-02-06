@@ -1,0 +1,1389 @@
+% ============================================================================
+% BÁO CÁO CHI TIẾT: PHẦN CỨNG VÀ PHẦN MỀM MÁY CHỦ VÀ CLIENT
+% Dự án: CSV Translator Pro - Sử dụng mô hình google/translategemma-27b-it
+% ============================================================================
+
+\documentclass[a4paper,12pt]{article}
+
+% ======================== PACKAGES ========================
+\usepackage[utf8]{inputenc}
+\usepackage[vietnamese]{babel}
+\usepackage[T5]{fontenc}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{xcolor}
+\usepackage{colortbl}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{amsmath}
+\usepackage{tabularx}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{tcolorbox}
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows.meta, positioning, calc}
+
+% ======================== PAGE SETUP ========================
+\geometry{
+    top=2.5cm,
+    bottom=2.5cm,
+    left=3cm,
+    right=2.5cm,
+}
+
+% ======================== COLORS ========================
+\definecolor{primaryblue}{RGB}{25, 55, 109}
+\definecolor{accentgreen}{RGB}{16, 185, 129}
+\definecolor{warningorange}{RGB}{245, 158, 11}
+\definecolor{dangerred}{RGB}{239, 68, 68}
+\definecolor{lightgray}{RGB}{243, 244, 246}
+\definecolor{codebg}{RGB}{248, 249, 250}
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+
+% ======================== HEADER/FOOTER ========================
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\textcolor{primaryblue}{CSV Translator Pro -- Báo cáo phần cứng \& phần mềm}}
+\fancyhead[R]{\small\textcolor{primaryblue}{\thepage}}
+\fancyfoot[C]{\small\textcolor{codegray}{google/translategemma-27b-it}}
+\renewcommand{\headrulewidth}{0.5pt}
+\renewcommand{\footrulewidth}{0.3pt}
+
+% ======================== LISTING STYLE ========================
+\lstset{
+    backgroundcolor=\color{codebg},
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    captionpos=b,
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{primaryblue}\bfseries,
+    stringstyle=\color{codepurple},
+    numberstyle=\tiny\color{codegray},
+    numbers=left,
+    numbersep=8pt,
+    frame=single,
+    rulecolor=\color{lightgray},
+    tabsize=4,
+    showstringspaces=false,
+}
+
+% ======================== TCOLORBOX STYLES ========================
+\tcbuselibrary{skins, breakable}
+
+\newtcolorbox{infobox}[1][]{
+    colback=blue!5!white,
+    colframe=primaryblue,
+    fonttitle=\bfseries,
+    title=#1,
+    breakable,
+}
+
+\newtcolorbox{warnbox}[1][]{
+    colback=orange!5!white,
+    colframe=warningorange,
+    fonttitle=\bfseries,
+    title=#1,
+    breakable,
+}
+
+\newtcolorbox{successbox}[1][]{
+    colback=green!5!white,
+    colframe=accentgreen,
+    fonttitle=\bfseries,
+    title=#1,
+    breakable,
+}
+
+% ======================== TITLE FORMATTING ========================
+\titleformat{\section}
+    {\Large\bfseries\color{primaryblue}}{\thesection}{1em}{}
+\titleformat{\subsection}
+    {\large\bfseries\color{primaryblue!80}}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}
+    {\normalsize\bfseries\color{primaryblue!60}}{\thesubsubsection}{1em}{}
+
+% ======================== HYPERLINK ========================
+\hypersetup{
+    colorlinks=true,
+    linkcolor=primaryblue,
+    urlcolor=primaryblue,
+    citecolor=primaryblue,
+}
+
+% ============================================================================
+%                           BẮT ĐẦU TÀI LIỆU
+% ============================================================================
+\begin{document}
+
+% ======================== TRANG BÌA ========================
+\begin{titlepage}
+    \centering
+    \vspace*{2cm}
+    
+    {\Huge\bfseries\textcolor{primaryblue}{BÁO CÁO CHI TIẾT}}\\[0.8cm]
+    {\LARGE\textcolor{primaryblue}{Phần Cứng và Phần Mềm}}\\[0.5cm]
+    {\LARGE\textcolor{primaryblue}{Máy Chủ (Server) và Máy Khách (Client)}}\\[1.5cm]
+    
+    \rule{\textwidth}{1pt}\\[0.5cm]
+    {\Large\textbf{Dự án: CSV Translator Pro}}\\[0.3cm]
+    {\large Ứng dụng dịch thuật đa ngôn ngữ sử dụng AI}\\[0.3cm]
+    {\large Mô hình: \texttt{google/translategemma-27b-it}}\\[0.5cm]
+    \rule{\textwidth}{1pt}\\[2cm]
+    
+    \begin{tabular}{rl}
+        \textbf{Kiến trúc:} & Client--Server (Web Application) \\[0.3cm]
+        \textbf{Backend:} & FastAPI + PyTorch + Hugging Face Transformers \\[0.3cm]
+        \textbf{Frontend:} & React 19 + Vite 7 \\[0.3cm]
+        \textbf{Mô hình AI:} & TranslateGemma 27B-IT (27 tỷ tham số) \\[0.3cm]
+        \textbf{Ngôn ngữ hỗ trợ:} & 55 ngôn ngữ \\[0.3cm]
+    \end{tabular}
+    
+    \vfill
+    {\large Ngày lập: \today}
+\end{titlepage}
+
+% ======================== MỤC LỤC ========================
+\tableofcontents
+\newpage
+
+% ============================================================================
+%                     PHẦN 1: TỔNG QUAN DỰ ÁN
+% ============================================================================
+\section{Tổng quan dự án}
+
+\subsection{Giới thiệu}
+
+CSV Translator Pro là một ứng dụng web dịch thuật đa ngôn ngữ sử dụng trí tuệ nhân tạo, được thiết kế với kiến trúc Client--Server. Ứng dụng sử dụng mô hình ngôn ngữ lớn \textbf{TranslateGemma-27B-IT} của Google --- một mô hình dịch thuật tiên tiến thuộc họ Gemma~3 với 27 tỷ tham số, hỗ trợ dịch thuật chính xác qua 55 ngôn ngữ.
+
+\subsection{Các chức năng chính}
+
+\begin{enumerate}[label=\arabic*., leftmargin=2cm]
+    \item \textbf{Dịch file CSV hàng loạt}: Tải lên file CSV, dịch tự động cột ``Text'' và tải về kết quả.
+    \item \textbf{Dịch văn bản trực tiếp}: Nhập văn bản và nhận bản dịch theo thời gian thực.
+    \item \textbf{Dịch văn bản từ ảnh (OCR)}: Trích xuất và dịch văn bản nhúng trong hình ảnh.
+    \item \textbf{Hỗ trợ triển khai offline}: Đóng gói toàn bộ mô hình và thư viện để chạy không cần Internet.
+\end{enumerate}
+
+\subsection{Kiến trúc hệ thống tổng quan}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+    node distance=2cm,
+    box/.style={
+        rectangle, rounded corners=5pt, draw=primaryblue, thick,
+        fill=blue!5, text width=4cm, minimum height=1.5cm,
+        text centered, font=\small
+    },
+    bigbox/.style={
+        rectangle, rounded corners=5pt, draw=primaryblue, thick,
+        fill=blue!5, text width=5cm, minimum height=2cm,
+        text centered, font=\small
+    },
+    arrow/.style={-{Stealth[length=3mm]}, thick, primaryblue}
+]
+
+% Client
+\node[box] (client) {
+    \textbf{CLIENT}\\
+    React 19 + Vite 7\\
+    Trình duyệt Web
+};
+
+% Server
+\node[bigbox, right=3cm of client] (server) {
+    \textbf{SERVER}\\
+    FastAPI + Uvicorn\\
+    Python 3.12+
+};
+
+% Model
+\node[box, right=3cm of server] (model) {
+    \textbf{AI MODEL}\\
+    TranslateGemma-27B\\
+    PyTorch + CUDA
+};
+
+% GPU
+\node[box, below=1.5cm of model] (gpu) {
+    \textbf{GPU}\\
+    NVIDIA (CUDA)\\
+    $\geq$ 24GB VRAM
+};
+
+% Arrows
+\draw[arrow] (client) -- node[above, font=\footnotesize] {HTTP/REST API} (server);
+\draw[arrow] (server) -- node[above, font=\footnotesize] {Inference} (model);
+\draw[arrow] (model) -- (gpu);
+
+\end{tikzpicture}
+\caption{Sơ đồ kiến trúc tổng quan hệ thống CSV Translator Pro}
+\label{fig:architecture}
+\end{figure}
+
+% ============================================================================
+%                PHẦN 2: MÔ HÌNH TRANSLATEGEMMA-27B-IT
+% ============================================================================
+\newpage
+\section{Thông số mô hình TranslateGemma-27B-IT}
+
+\subsection{Tổng quan mô hình}
+
+\textbf{TranslateGemma-27B-IT} là mô hình dịch thuật mã nguồn mở tiên tiến nhất trong họ TranslateGemma của Google, được xây dựng trên nền tảng kiến trúc Gemma~3. Đây là phiên bản lớn nhất, mang lại độ chính xác dịch thuật cao nhất, phù hợp cho môi trường production server.
+
+\begin{table}[H]
+\centering
+\caption{Thông số kỹ thuật mô hình TranslateGemma-27B-IT}
+\label{tab:model_specs}
+\renewcommand{\arraystretch}{1.4}
+\begin{tabularx}{\textwidth}{|l|X|}
+\hline
+\rowcolor{primaryblue!10}
+\textbf{Thông số} & \textbf{Giá trị} \\
+\hline
+Tên mô hình & \texttt{google/translategemma-27b-it} \\
+\hline
+Số tham số (Parameters) & 27 tỷ (27B) \\
+\hline
+Kiến trúc & Decoder-only Transformer (Gemma 3) \\
+\hline
+Số lớp (Layers) & 46 \\
+\hline
+Hidden Dimension & 4096 \\
+\hline
+Attention Heads & 64 \\
+\hline
+Key-Value Heads & 16 (Grouped-Query Attention) \\
+\hline
+Position Embedding & RoPE (Rotary Position Embedding) \\
+\hline
+Normalization & RMS Normalization \\
+\hline
+Context Length (Đầu vào) & 2,048 tokens \\
+\hline
+Hỗ trợ ảnh & Có (896$\times$896, mã hóa 256 tokens/ảnh) \\
+\hline
+Số ngôn ngữ hỗ trợ & 55 ngôn ngữ \\
+\hline
+Định dạng trọng số & Safetensors \\
+\hline
+Giấy phép & Gemma License \\
+\hline
+Framework huấn luyện & JAX + ML Pathways \\
+\hline
+Phần cứng huấn luyện & Google TPUv4p, TPUv5p, TPUv5e \\
+\hline
+Dữ liệu SFT & 4.3 tỷ tokens \\
+\hline
+Dữ liệu RLHF & 10.2 triệu tokens \\
+\hline
+\end{tabularx}
+\end{table}
+
+\subsection{So sánh các phiên bản TranslateGemma}
+
+\begin{table}[H]
+\centering
+\caption{So sánh benchmark giữa các phiên bản TranslateGemma}
+\label{tab:model_comparison}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{|l|c|c|c|}
+\hline
+\rowcolor{primaryblue!10}
+\textbf{Benchmark} & \textbf{4B} & \textbf{12B} & \textbf{27B} \\
+\hline
+WMT24++ MetricX $\downarrow$ & 5.32 & 3.60 & \textbf{3.09} \\
+\hline
+WMT24++ COMET $\uparrow$ & 81.6 & 83.5 & \textbf{84.4} \\
+\hline
+WMT25 MQM $\downarrow$ & N/A & 7.94 & \textbf{5.86} \\
+\hline
+Vistra MetricX $\downarrow$ & 2.57 & 2.08 & \textbf{1.57} \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{infobox}[Lưu ý về mô hình 27B so với 4B hiện tại]
+Dự án hiện đang sử dụng \texttt{google/translategemma-4b-it} (4 tỷ tham số). Việc nâng cấp lên \texttt{google/translategemma-27b-it} (27 tỷ tham số) sẽ mang lại:
+\begin{itemize}
+    \item Chất lượng dịch thuật tốt hơn đáng kể (MetricX giảm từ 5.32 xuống 3.09)
+    \item Yêu cầu phần cứng cao hơn nhiều (đặc biệt về VRAM GPU)
+    \item Tốc độ suy luận (inference) chậm hơn do kích thước mô hình lớn hơn 6.75 lần
+\end{itemize}
+\end{infobox}
+
+\subsection{Yêu cầu VRAM theo phương pháp lượng tử hóa}
+
+\begin{table}[H]
+\centering
+\caption{Yêu cầu VRAM GPU cho TranslateGemma-27B-IT}
+\label{tab:vram_requirements}
+\renewcommand{\arraystretch}{1.4}
+\begin{tabularx}{\textwidth}{|l|c|c|X|}
+\hline
+\rowcolor{primaryblue!10}
+\textbf{Phương pháp} & \textbf{VRAM (Model)} & \textbf{VRAM (Thực tế)} & \textbf{Ghi chú} \\
+\hline
+FP16 / BF16 & $\sim$54 GB & $\sim$58--62 GB & Chất lượng tốt nhất, cần GPU cao cấp (A100/H100) \\
+\hline
+INT8 (8-bit) & $\sim$27 GB & $\sim$30--34 GB & Cân bằng chất lượng/hiệu năng, cần GPU $\geq$32~GB \\
+\hline
+INT4 / NF4 (4-bit) & $\sim$14.1 GB & $\sim$18--22 GB & Giảm chất lượng nhẹ, chạy được trên RTX 3090/4090 \\
+\hline
+QAT INT4 & $\sim$14.1 GB & $\sim$18--20 GB & Google QAT --- giữ chất lượng tốt hơn PTQ \\
+\hline
+\end{tabularx}
+\end{table}
+
+\begin{warnbox}[VRAM thực tế cao hơn trọng số mô hình]
+VRAM thực tế khi suy luận luôn cao hơn kích thước trọng số mô hình vì cần thêm bộ nhớ cho:
+\begin{itemize}
+    \item KV-Cache (Key-Value Cache) cho attention mechanism
+    \item Activation memory cho quá trình forward pass
+    \item Buffer của CUDA runtime và framework
+    \item Context window (cửa sổ ngữ cảnh) --- lên đến 2K tokens
+\end{itemize}
+\end{warnbox}
+
+% ============================================================================
+%               PHẦN 3: PHẦN CỨNG MÁY CHỦ (SERVER)
+% ============================================================================
+\newpage
+\section{Phần cứng máy chủ (Server)}
+
+Máy chủ là thành phần cốt lõi, chịu trách nhiệm chạy mô hình AI TranslateGemma-27B-IT và xử lý tất cả yêu cầu dịch thuật. Yêu cầu phần cứng phụ thuộc chủ yếu vào phương pháp lượng tử hóa được chọn.
+
+\subsection{GPU --- Card đồ họa (Thành phần quan trọng nhất)}
+
+\begin{table}[H]
+\centering
+\caption{Các cấu hình GPU đề xuất cho TranslateGemma-27B-IT}
+\label{tab:gpu_configs}
+\renewcommand{\arraystretch}{1.4}
+\begin{tabularx}{\textwidth}{|l|c|c|c|X|}
+\hline
+\rowcolor{primaryblue!10}
+\textbf{GPU} & \textbf{VRAM} & \textbf{Quantization} & \textbf{Mức} & \textbf{Ghi chú} \\
+\hline
+\multicolumn{5}{|c|}{\cellcolor{accentgreen!15}\textbf{Cấu hình tối thiểu}} \\
+\hline
+RTX 3090 & 24 GB & NF4 (4-bit) & Tối thiểu & VRAM vừa đủ, có thể gặp OOM với văn bản dài \\
+\hline
+RTX 4090 & 24 GB & NF4 (4-bit) & Tối thiểu & Nhanh hơn 3090, kiến trúc Ada Lovelace \\
+\hline
+\multicolumn{5}{|c|}{\cellcolor{blue!10}\textbf{Cấu hình khuyến nghị}} \\
+\hline
+RTX A5000 & 24 GB & NF4 (4-bit) & Khuyến nghị & ECC memory, dòng workstation ổn định \\
+\hline
+RTX A6000 & 48 GB & INT8 (8-bit) & Khuyến nghị & Đủ VRAM cho 8-bit, chất lượng tốt hơn \\
+\hline
+RTX 6000 Ada & 48 GB & INT8 / FP16 & Khuyến nghị & Thế hệ mới, hiệu năng cao \\
+\hline
+\multicolumn{5}{|c|}{\cellcolor{warningorange!15}\textbf{Cấu hình tối ưu (Production)}} \\
+\hline
+NVIDIA A100 & 80 GB & FP16 / BF16 & Tối ưu & Tiêu chuẩn datacenter, Tensor Cores thế hệ 3 \\
+\hline
+NVIDIA H100 & 80 GB & BF16 & Tối ưu & Hiệu năng AI tốt nhất, Tensor Cores thế hệ 4 \\
+\hline
+NVIDIA L40S & 48 GB & INT8 / FP16 & Tối ưu & Ada Lovelace datacenter, giá tốt hơn A100 \\
+\hline
+\end{tabularx}
+\end{table}
+
+\begin{successbox}[Khuyến nghị GPU cho dự án này]
+\begin{itemize}
+    \item \textbf{Ngân sách hạn chế}: NVIDIA RTX 4090 (24~GB) + NF4 4-bit quantization
+    \item \textbf{Cân bằng}: NVIDIA RTX A6000 (48~GB) + INT8 8-bit quantization
+    \item \textbf{Production/Doanh nghiệp}: NVIDIA A100 80~GB hoặc H100 80~GB + FP16/BF16
+    \item \textbf{Multi-GPU}: 2$\times$ RTX 4090 hoặc 2$\times$ A6000 với \texttt{device\_map="auto"} cho model sharding
+\end{itemize}
+\end{successbox}
+
+\subsection{CPU --- Bộ xử lý trung tâm}
+
+\begin{table}[H]
+\centering
+\caption{Yêu cầu CPU cho máy chủ}
+\label{tab:cpu_server}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{|l|X|X|X|}
+\hline
+\rowcolor{primaryblue!10}
+\textbf{Thông số} & \textbf{Tối thiểu} & \textbf{Khuyến nghị} & \textbf{Tối ưu} \\
+\hline
+Bộ xử lý & Intel Core i7-12700 hoặc AMD Ryzen 7 5800X & Intel Xeon W-2255 hoặc AMD EPYC 7313 & Intel Xeon Gold 6338 hoặc AMD EPYC 7543 \\
+\hline
+Số nhân/luồng & $\geq$ 8 nhân / 16 luồng & $\geq$ 16 nhân / 32 luồng & $\geq$ 32 nhân / 64 luồng \\
+\hline
+Tần số & $\geq$ 3.0 GHz & $\geq$ 3.4 GHz & $\geq$ 2.8 GHz (nhiều nhân) \\
+\hline
+Hỗ trợ PCIe & PCIe 4.0 x16 & PCIe 4.0 x16 & PCIe 5.0 x16 \\
+\hline
+\end{tabularx}
+\end{table}
+
+\begin{infobox}[Vai trò CPU trong hệ thống]
+CPU chủ yếu đảm nhiệm:
+\begin{itemize}
+    \item Chạy FastAPI web server (Uvicorn ASGI)
+    \item Tiền xử lý dữ liệu (đọc CSV, xử lý ảnh với Pillow)
+    \item Quản lý hàng đợi công việc (job queue) và background tasks
+    \item Tokenization văn bản đầu vào
+    \item Truyền dữ liệu giữa CPU $\leftrightarrow$ GPU qua PCIe bus
+\end{itemize}
+Phần lớn tính toán nặng (inference) được GPU đảm nhiệm, nên CPU không cần quá mạnh.
+\end{infobox}
+
+\subsection{RAM --- Bộ nhớ hệ thống}
+
+\begin{table}[H]
+\centering
+\caption{Yêu cầu RAM cho máy chủ}
+\label{tab:ram_server}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{|l|c|c|c|}
+\hline
+\rowcolor{primaryblue!10}
+\textbf{Thông số} & \textbf{Tối thiểu} & \textbf{Khuyến nghị} & \textbf{Tối ưu} \\
+\hline
+Dung lượng & 32 GB & 64 GB & 128 GB \\
+\hline
+Loại & DDR4-3200 & DDR4-3600 / DDR5-4800 & DDR5-5600 ECC \\
+\hline
+Kênh & Dual Channel & Dual Channel & Quad Channel \\
+\hline
+\end{tabularx}
+\end{table}
+
+\textbf{Lý do cần nhiều RAM:}
+\begin{itemize}
+    \item Mô hình 27B cần tải trọng số vào RAM trước khi chuyển sang GPU ($\sim$27--54~GB tùy precision)
+    \item Pandas DataFrame khi xử lý CSV lớn chiếm bộ nhớ
+    \item Xử lý ảnh (Pillow) cần buffer trong RAM
+    \item Hệ điều hành và các dịch vụ nền
+    \item Overhead cho Python runtime và garbage collection
+\end{itemize}
+
+\subsection{Ổ cứng --- Lưu trữ}
+
+\begin{table}[H]
+\centering
+\caption{Yêu cầu lưu trữ cho máy chủ}
+\label{tab:storage_server}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{|l|X|c|}
+\hline
+\rowcolor{primaryblue!10}
+\textbf{Thành phần} & \textbf{Mô tả} & \textbf{Dung lượng ước tính} \\
+\hline
+Trọng số mô hình (FP16) & Cache Hugging Face: \texttt{\textasciitilde/.cache/huggingface/hub/} & $\sim$54 GB \\
+\hline
+Trọng số mô hình (4-bit) & Phiên bản đã lượng tử hóa & $\sim$15 GB \\
+\hline
+Hệ điều hành & Windows Server / Ubuntu & $\sim$30--50 GB \\
+\hline
+Python + Thư viện & Virtual environment, PyTorch, CUDA & $\sim$15--20 GB \\
+\hline
+CUDA Toolkit & Driver + Runtime libraries & $\sim$5--8 GB \\
+\hline
+Dữ liệu tạm (uploads/outputs) & File CSV tải lên và kết quả dịch & $\sim$10--50 GB \\
+\hline
+\textbf{Tổng cộng} & & \textbf{$\sim$130--240 GB} \\
+\hline
+\end{tabularx}
+\end{table}
+
+\begin{warnbox}[Yêu cầu SSD bắt buộc]
+\textbf{Bắt buộc sử dụng SSD NVMe} cho ổ chứa mô hình:
+\begin{itemize}
+    \item Tải mô hình 27B từ ổ cứng lần đầu mất 30--120 giây (SSD) vs 5--15 phút (HDD)
+    \item Khuyến nghị: SSD NVMe Gen4 $\geq$ 500~GB, tốc độ đọc $\geq$ 5,000~MB/s
+    \item Dung lượng tối thiểu: 256~GB (chỉ đủ cho mô hình 4-bit + hệ thống)
+\end{itemize}
+\end{warnbox}
+
+\subsection{Nguồn điện (PSU)}
+
+\begin{table}[H]
+\centering
+\caption{Yêu cầu nguồn điện theo cấu hình GPU}
+\label{tab:psu_server}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{|l|c|c|c|}
+\hline
+\rowcolor{primaryblue!10}
+\textbf{Cấu hình GPU} & \textbf{TDP GPU} & \textbf{TDP Hệ thống} & \textbf{PSU khuyến nghị} \\
+\hline
+1$\times$ RTX 4090 & 450W & $\sim$650W & $\geq$ 850W (80+ Gold) \\
+\hline
+1$\times$ RTX A6000 & 300W & $\sim$550W & $\geq$ 750W (80+ Gold) \\
+\hline
+1$\times$ A100 PCIe & 300W & $\sim$550W & $\geq$ 750W (80+ Platinum) \\
+\hline
+2$\times$ RTX 4090 & 900W & $\sim$1200W & $\geq$ 1600W (80+ Platinum) \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Mạng (Network)}
+
+\begin{table}[H]
+\centering
+\caption{Yêu cầu mạng cho máy chủ}
+\label{tab:network_server}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{|l|X|}
+\hline
+\rowcolor{primaryblue!10}
+\textbf{Thông số} & \textbf{Yêu cầu} \\
+\hline
+Tốc độ mạng LAN & $\geq$ 1 Gbps (khuyến nghị 10~Gbps cho nhiều client đồng thời) \\
+\hline
+Internet & Chỉ cần khi tải mô hình lần đầu. Sau đó có thể chạy offline hoàn toàn \\
+\hline
+Cổng mạng & Port 8000 (FastAPI mặc định), có thể tùy chỉnh \\
+\hline
+Giao thức & HTTP/HTTPS (khuyến nghị HTTPS với reverse proxy) \\
+\hline
+\end{tabularx}
+\end{table}
+
+\subsection{Tổng hợp cấu hình phần cứng máy chủ}
+
+\begin{table}[H]
+\centering
+\caption{Tổng hợp 3 mức cấu hình phần cứng máy chủ}
+\label{tab:server_summary}
+\renewcommand{\arraystretch}{1.4}
+\small
+\begin{tabularx}{\textwidth}{|l|X|X|X|}
+\hline
+\rowcolor{primaryblue!10}
+\textbf{Thành phần} & \textbf{Tối thiểu} & \textbf{Khuyến nghị} & \textbf{Tối ưu (Production)} \\
+\hline
+\textbf{GPU} & RTX 4090 24GB & RTX A6000 48GB & A100 80GB / H100 80GB \\
+\hline
+\textbf{Quantization} & NF4 4-bit & INT8 8-bit & FP16 / BF16 \\
+\hline
+\textbf{CPU} & i7-12700 (8C/16T) & Xeon W-2255 (16C/32T) & EPYC 7543 (32C/64T) \\
+\hline
+\textbf{RAM} & 32 GB DDR4 & 64 GB DDR4/DDR5 & 128 GB DDR5 ECC \\
+\hline
+\textbf{SSD} & 256 GB NVMe & 500 GB NVMe Gen4 & 1 TB NVMe Gen4/5 \\
+\hline
+\textbf{PSU} & 850W 80+ Gold & 750W 80+ Gold & 750W+ 80+ Platinum \\
+\hline
+\textbf{Mạng} & 1 Gbps & 1 Gbps & 10 Gbps \\
+\hline
+\textbf{Chi phí ước tính} & $\sim$\$3,000--4,000 & $\sim$\$6,000--10,000 & $\sim$\$15,000--30,000 \\
+\hline
+\end{tabularx}
+\end{table}
+
+% ============================================================================
+%               PHẦN 4: PHẦN MỀM MÁY CHỦ (SERVER)
+% ============================================================================
+\newpage
+\section{Phần mềm máy chủ (Server)}
+
+\subsection{Hệ điều hành}
+
+\begin{table}[H]
+\centering
+\caption{Hệ điều hành được hỗ trợ}
+\label{tab:os_server}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{|l|l|X|}
+\hline
+\rowcolor{primaryblue!10}
+\textbf{Hệ điều hành} & \textbf{Phiên bản} & \textbf{Ghi chú} \\
+\hline
+Ubuntu Server & 22.04 LTS / 24.04 LTS & \textbf{Khuyến nghị} -- Hỗ trợ tốt nhất cho CUDA \& bitsandbytes \\
+\hline
+Windows Server & 2022 & Hỗ trợ, nhưng bitsandbytes (quantization) hạn chế \\
+\hline
+Windows 10/11 & Pro/Enterprise & Dùng cho phát triển/thử nghiệm \\
+\hline
+Rocky Linux & 9.x & Thay thế CentOS cho môi trường enterprise \\
+\hline
+\end{tabularx}
+\end{table}
+
+\subsection{CUDA Toolkit và NVIDIA Driver}
+
+\begin{table}[H]
+\centering
+\caption{Yêu cầu CUDA và Driver}
+\label{tab:cuda_driver}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{|l|X|}
+\hline
+\rowcolor{primaryblue!10}
+\textbf{Thành phần} & \textbf{Phiên bản yêu cầu} \\
+\hline
+NVIDIA Driver & $\geq$ 550.x (hỗ trợ CUDA 12.4) \\
+\hline
+CUDA Toolkit & 12.4 (tương thích với PyTorch 2.6.0+cu124) \\
+\hline
+cuDNN & $\geq$ 8.9 (đi kèm với CUDA Toolkit) \\
+\hline
+NCCL & $\geq$ 2.20 (cần cho multi-GPU, nếu sử dụng) \\
+\hline
+\end{tabularx}
+\end{table}
+
+\subsection{Python Runtime và môi trường ảo}
+
+\begin{table}[H]
+\centering
+\caption{Môi trường Python}
+\label{tab:python_env}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{|l|X|}
+\hline
+\rowcolor{primaryblue!10}
+\textbf{Thành phần} & \textbf{Chi tiết} \\
+\hline
+Python & $\geq$ 3.10, khuyến nghị 3.12.x \\
+\hline
+Pip & $\geq$ 23.0 \\
+\hline
+Virtual Environment & \texttt{python -m venv .my-env} hoặc Conda \\
+\hline
+\end{tabularx}
+\end{table}
+
+\subsection{Thư viện Python --- Backend Dependencies}
+
+\begin{table}[H]
+\centering
+\caption{Danh sách thư viện Python chính}
+\label{tab:python_deps}
+\renewcommand{\arraystretch}{1.3}
+\small
+\begin{tabularx}{\textwidth}{|l|l|X|}
+\hline
+\rowcolor{primaryblue!10}
+\textbf{Thư viện} & \textbf{Phiên bản} & \textbf{Mục đích} \\
+\hline
+\multicolumn{3}{|c|}{\cellcolor{accentgreen!10}\textbf{Framework Web}} \\
+\hline
+\texttt{fastapi} & latest & Framework web API hiệu năng cao (ASGI) \\
+\hline
+\texttt{uvicorn[standard]} & latest & ASGI server chạy FastAPI \\
+\hline
+\texttt{python-multipart} & latest & Xử lý upload file (multipart form data) \\
+\hline
+\texttt{aiofiles} & latest & Đọc/ghi file bất đồng bộ (async I/O) \\
+\hline
+\multicolumn{3}{|c|}{\cellcolor{blue!10}\textbf{Machine Learning / AI}} \\
+\hline
+\texttt{torch} & $\geq$ 2.6.0+cu124 & PyTorch với hỗ trợ CUDA 12.4 \\
+\hline
+\texttt{torchvision} & $\geq$ 0.21.0+cu124 & Xử lý ảnh cho PyTorch \\
+\hline
+\texttt{torchaudio} & $\geq$ 2.6.0+cu124 & Xử lý âm thanh (dependency) \\
+\hline
+\texttt{transformers} & latest & Hugging Face Transformers --- tải và chạy mô hình \\
+\hline
+\texttt{accelerate} & latest & Tối ưu hóa tải mô hình và device mapping \\
+\hline
+\texttt{bitsandbytes} & latest & Lượng tử hóa 4-bit/8-bit (NF4, INT8) \\
+\hline
+\texttt{sentencepiece} & latest & Tokenizer cho mô hình Gemma \\
+\hline
+\texttt{huggingface\_hub} & latest & Tải/quản lý mô hình từ Hugging Face Hub \\
+\hline
+\texttt{sacremoses} & latest & Tiền xử lý văn bản (tokenization, detokenization) \\
+\hline
+\multicolumn{3}{|c|}{\cellcolor{warningorange!10}\textbf{Xử lý dữ liệu}} \\
+\hline
+\texttt{pandas} & latest & Đọc/ghi và xử lý file CSV \\
+\hline
+\texttt{Pillow} & latest & Xử lý hình ảnh (resize, convert, OCR input) \\
+\hline
+\texttt{requests} & latest & HTTP client (tải ảnh từ URL) \\
+\hline
+\texttt{packaging} & latest & Quản lý phiên bản thư viện \\
+\hline
+\end{tabularx}
+\end{table}
+
+\subsection{Cài đặt PyTorch với CUDA}
+
+\begin{lstlisting}[language=bash, caption={Lệnh cài đặt PyTorch cho CUDA 12.4}]
+# CUDA 12.4 (khuyến nghị)
+pip install torch==2.6.0+cu124 \
+    torchvision==0.21.0+cu124 \
+    torchaudio==2.6.0+cu124 \
+    --index-url https://download.pytorch.org/whl/cu124
+
+# CPU only (chỉ dùng khi không có GPU - rất chậm)
+pip install torch==2.6.0 torchvision==0.21.0 torchaudio==2.6.0
+\end{lstlisting}
+
+\subsection{Kiến trúc phần mềm Backend}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+    node distance=1.2cm and 2cm,
+    module/.style={
+        rectangle, rounded corners=3pt, draw=primaryblue, thick,
+        fill=blue!8, text width=4.5cm, minimum height=1cm,
+        text centered, font=\small
+    },
+    arrow/.style={-{Stealth[length=2.5mm]}, thick, primaryblue!70}
+]
+
+% Modules
+\node[module] (main) {\textbf{main.py}\\FastAPI Application\\REST API Endpoints};
+\node[module, below=of main] (gemma) {\textbf{gemma\_translator.py}\\GemmaTranslationService\\Pipeline Management};
+\node[module, below left=1.5cm and -0.5cm of gemma] (loadenv) {\textbf{load\_env.py}\\Environment Loader\\.env configuration};
+\node[module, below right=1.5cm and -0.5cm of gemma] (download) {\textbf{download\_model.py}\\Model Downloader\\HF Hub Cache};
+
+% External
+\node[module, right=2.5cm of main, fill=green!8, draw=accentgreen] (hf) {\textbf{Hugging Face}\\Transformers\\Pipeline API};
+\node[module, right=2.5cm of gemma, fill=orange!8, draw=warningorange] (torch) {\textbf{PyTorch}\\CUDA Runtime\\Tensor Operations};
+
+% Arrows
+\draw[arrow] (main) -- (gemma);
+\draw[arrow] (main.south west) -- +(-0.5,-0.3) -| (loadenv.north);
+\draw[arrow] (gemma) -- (hf);
+\draw[arrow] (gemma) -- (torch);
+\draw[arrow] (download) -- (hf);
+
+\end{tikzpicture}
+\caption{Sơ đồ module phần mềm Backend}
+\label{fig:backend_modules}
+\end{figure}
+
+\subsection{API Endpoints}
+
+\begin{table}[H]
+\centering
+\caption{Danh sách API Endpoints}
+\label{tab:api_endpoints}
+\renewcommand{\arraystretch}{1.3}
+\small
+\begin{tabularx}{\textwidth}{|l|l|X|}
+\hline
+\rowcolor{primaryblue!10}
+\textbf{Method} & \textbf{Endpoint} & \textbf{Mô tả} \\
+\hline
+GET & \texttt{/api/languages} & Lấy danh sách ngôn ngữ được hỗ trợ \\
+\hline
+POST & \texttt{/api/translate-text} & Dịch một đoạn văn bản \\
+\hline
+POST & \texttt{/api/translate-image} & Trích xuất và dịch văn bản từ ảnh \\
+\hline
+POST & \texttt{/api/upload} & Tải lên file CSV và bắt đầu dịch hàng loạt \\
+\hline
+GET & \texttt{/api/status/\{job\_id\}} & Kiểm tra tiến trình dịch CSV \\
+\hline
+GET & \texttt{/api/download/\{job\_id\}} & Tải file CSV đã dịch \\
+\hline
+GET & \texttt{/api/health} & Kiểm tra trạng thái hoạt động server \\
+\hline
+\end{tabularx}
+\end{table}
+
+\subsection{Cấu hình lượng tử hóa cho mô hình 27B}
+
+Khi nâng cấp từ mô hình 4B lên 27B, cần điều chỉnh logic lượng tử hóa trong \texttt{gemma\_translator.py}:
+
+\begin{lstlisting}[language=Python, caption={Logic lượng tử hóa điều chỉnh cho translategemma-27b-it}]
+MODEL_NAME = "google/translategemma-27b-it"
+
+# Quantization logic for 27B model
+if vram_gb < 24:
+    # Khong du VRAM cho 27B, can su dung 4B thay the
+    print("[Gemma] VRAM < 24GB -> Cannot run 27B model")
+    raise RuntimeError("Insufficient VRAM for 27B model")
+elif vram_gb < 48:
+    # 24-47 GB: Bat buoc dung 4-bit quantization
+    print(f"[Gemma] VRAM < 48GB -> Using 4-bit NF4")
+    self._use_quantization = "4bit"
+elif vram_gb < 64:
+    # 48-63 GB: Co the dung 8-bit
+    print(f"[Gemma] VRAM < 64GB -> Using 8-bit")
+    self._use_quantization = "8bit"
+else:
+    # >= 64 GB: Chay FP16/BF16 day du
+    print(f"[Gemma] VRAM >= 64GB -> BFloat16")
+    self._use_quantization = None
+\end{lstlisting}
+
+\subsection{Cấu hình Offline Mode}
+
+\begin{lstlisting}[language=bash, caption={Nội dung file .env cho chế độ offline}]
+# Offline mode - khong can Internet
+HF_HUB_OFFLINE=true
+TRANSFORMERS_OFFLINE=true
+
+# Token Hugging Face (can khi tai model lan dau)
+HF_TOKEN=hf_xxxxxxxxxxxxxxxxxxxxxx
+
+# CUDA configuration
+CUDA_VISIBLE_DEVICES=0
+\end{lstlisting}
+
+% ============================================================================
+%               PHẦN 5: PHẦN CỨNG MÁY KHÁCH (CLIENT)
+% ============================================================================
+\newpage
+\section{Phần cứng máy khách (Client)}
+
+Máy khách (Client) chỉ cần chạy trình duyệt web để truy cập giao diện ứng dụng. Toàn bộ tính toán AI được thực hiện trên máy chủ, nên yêu cầu phần cứng rất nhẹ.
+
+\subsection{Yêu cầu phần cứng Client}
+
+\begin{table}[H]
+\centering
+\caption{Yêu cầu phần cứng máy khách}
+\label{tab:client_hardware}
+\renewcommand{\arraystretch}{1.4}
+\begin{tabularx}{\textwidth}{|l|X|X|}
+\hline
+\rowcolor{primaryblue!10}
+\textbf{Thành phần} & \textbf{Tối thiểu} & \textbf{Khuyến nghị} \\
+\hline
+\textbf{CPU} & Intel Core i3 / AMD Ryzen 3 hoặc tương đương & Intel Core i5 / AMD Ryzen 5 trở lên \\
+\hline
+\textbf{RAM} & 4 GB & 8 GB trở lên \\
+\hline
+\textbf{Ổ cứng} & 1 GB trống (cho cache trình duyệt) & SSD bất kỳ \\
+\hline
+\textbf{GPU} & Không yêu cầu (integrated graphics đủ dùng) & Không yêu cầu \\
+\hline
+\textbf{Màn hình} & Độ phân giải $\geq$ 1280$\times$720 & $\geq$ 1920$\times$1080 (Full HD) \\
+\hline
+\textbf{Mạng} & Kết nối đến máy chủ (LAN/WiFi) & LAN Gigabit hoặc WiFi 5/6 \\
+\hline
+\end{tabularx}
+\end{table}
+
+\begin{successbox}[Client rất nhẹ]
+Vì toàn bộ xử lý AI diễn ra trên Server, Client chỉ cần:
+\begin{itemize}
+    \item Hiển thị giao diện web (HTML/CSS/JavaScript)
+    \item Gửi file CSV / văn bản / ảnh đến Server qua HTTP
+    \item Nhận và hiển thị kết quả dịch
+    \item Polling tiến trình (mỗi 1 giây cho dịch CSV)
+\end{itemize}
+Bất kỳ máy tính, laptop, hoặc tablet nào có trình duyệt web hiện đại đều có thể làm Client.
+\end{successbox}
+
+\subsection{Thiết bị Client được hỗ trợ}
+
+\begin{table}[H]
+\centering
+\caption{Các loại thiết bị Client được hỗ trợ}
+\label{tab:client_devices}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{|l|X|c|}
+\hline
+\rowcolor{primaryblue!10}
+\textbf{Loại thiết bị} & \textbf{Mô tả} & \textbf{Hỗ trợ} \\
+\hline
+PC Desktop & Windows / macOS / Linux & Đầy đủ \\
+\hline
+Laptop & Bất kỳ với trình duyệt web hiện đại & Đầy đủ \\
+\hline
+Tablet & iPad, Android tablet & Đầy đủ \\
+\hline
+Điện thoại & iPhone, Android & Cơ bản (responsive) \\
+\hline
+Thin Client & Chrome OS, Raspberry Pi & Đầy đủ \\
+\hline
+\end{tabularx}
+\end{table}
+
+% ============================================================================
+%               PHẦN 6: PHẦN MỀM MÁY KHÁCH (CLIENT)
+% ============================================================================
+\newpage
+\section{Phần mềm máy khách (Client)}
+
+\subsection{Trình duyệt web yêu cầu}
+
+\begin{table}[H]
+\centering
+\caption{Trình duyệt web được hỗ trợ}
+\label{tab:browsers}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{|l|c|X|}
+\hline
+\rowcolor{primaryblue!10}
+\textbf{Trình duyệt} & \textbf{Phiên bản tối thiểu} & \textbf{Ghi chú} \\
+\hline
+Google Chrome & $\geq$ 90 & \textbf{Khuyến nghị} --- Hiệu năng tốt nhất \\
+\hline
+Mozilla Firefox & $\geq$ 90 & Hỗ trợ đầy đủ \\
+\hline
+Microsoft Edge & $\geq$ 90 & Chromium-based, tương tự Chrome \\
+\hline
+Safari & $\geq$ 15 & macOS / iOS \\
+\hline
+Opera & $\geq$ 80 & Chromium-based \\
+\hline
+\end{tabularx}
+\end{table}
+
+\begin{infobox}[Yêu cầu trình duyệt]
+Trình duyệt cần hỗ trợ:
+\begin{itemize}
+    \item \textbf{ES2020+} JavaScript (async/await, optional chaining)
+    \item \textbf{Fetch API} cho HTTP requests
+    \item \textbf{File API} cho upload file CSV và ảnh
+    \item \textbf{FileReader API} cho đọc và chuyển đổi base64 ảnh
+    \item \textbf{Drag and Drop API} cho kéo thả file CSV
+    \item \textbf{CSS Grid/Flexbox} cho responsive layout
+\end{itemize}
+\end{infobox}
+
+\subsection{Kiến trúc Frontend}
+
+\begin{table}[H]
+\centering
+\caption{Công nghệ Frontend}
+\label{tab:frontend_stack}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{|l|l|X|}
+\hline
+\rowcolor{primaryblue!10}
+\textbf{Công nghệ} & \textbf{Phiên bản} & \textbf{Mục đích} \\
+\hline
+\multicolumn{3}{|c|}{\cellcolor{accentgreen!10}\textbf{Runtime Dependencies}} \\
+\hline
+React & 19.2.0 & Thư viện UI, component-based architecture \\
+\hline
+React DOM & 19.2.0 & Render React components vào DOM \\
+\hline
+\multicolumn{3}{|c|}{\cellcolor{blue!10}\textbf{Development Dependencies}} \\
+\hline
+Vite & 7.2.4 & Build tool và dev server (HMR) \\
+\hline
+@vitejs/plugin-react & 5.1.1 & Plugin React cho Vite (JSX transform) \\
+\hline
+ESLint & 9.39.1 & Linting và code quality \\
+\hline
+eslint-plugin-react-hooks & 7.0.1 & Kiểm tra React Hooks rules \\
+\hline
+eslint-plugin-react-refresh & 0.4.24 & Hỗ trợ React Fast Refresh \\
+\hline
+\end{tabularx}
+\end{table}
+
+\subsection{Cấu trúc thư mục Frontend}
+
+\begin{lstlisting}[caption={Cấu trúc thư mục Frontend}]
+frontend/
+  ├── public/
+  │   ├── config.json         # Runtime API URL config
+  │   └── vite.svg
+  ├── src/
+  │   ├── App.jsx             # Component chính (3 tab)
+  │   ├── App.css             # Styles
+  │   ├── main.jsx            # Entry point
+  │   ├── index.css           # Global styles
+  │   └── assets/
+  │       └── react.svg
+  ├── index.html              # HTML template
+  ├── package.json            # Dependencies
+  ├── vite.config.js          # Vite configuration
+  └── eslint.config.js        # ESLint configuration
+\end{lstlisting}
+
+\subsection{Cơ chế giao tiếp Client--Server}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+    node distance=0.8cm,
+    step/.style={
+        rectangle, rounded corners=2pt, draw=primaryblue, thick,
+        fill=blue!5, text width=12cm, minimum height=0.8cm,
+        font=\small
+    },
+    arrow/.style={-{Stealth[length=2mm]}, thick, primaryblue!60}
+]
+
+\node[step] (s1) {\textbf{1. Cấu hình API URL}: Đọc \texttt{config.json} $\to$ \texttt{VITE\_API\_URL} $\to$ same-origin fallback};
+\node[step, below=of s1] (s2) {\textbf{2. CSV Upload}: \texttt{POST /api/upload} gửi FormData + params (method, source\_lang, target\_lang)};
+\node[step, below=of s2] (s3) {\textbf{3. Nhận Job ID}: Server trả về \texttt{job\_id} để theo dõi tiến trình};
+\node[step, below=of s3] (s4) {\textbf{4. Polling}: \texttt{GET /api/status/\{job\_id\}} mỗi 1 giây, cập nhật progress bar};
+\node[step, below=of s4] (s5) {\textbf{5. Hoàn thành}: Khi \texttt{status = "completed"}, hiển thị nút tải file};
+\node[step, below=of s5] (s6) {\textbf{6. Download}: \texttt{GET /api/download/\{job\_id\}} tải file CSV đã dịch};
+
+\draw[arrow] (s1) -- (s2);
+\draw[arrow] (s2) -- (s3);
+\draw[arrow] (s3) -- (s4);
+\draw[arrow] (s4) -- (s5);
+\draw[arrow] (s5) -- (s6);
+
+\end{tikzpicture}
+\caption{Luồng giao tiếp Client--Server khi dịch CSV}
+\label{fig:communication_flow}
+\end{figure}
+
+\subsection{Cấu hình Runtime (config.json)}
+
+\begin{lstlisting}[language=json, caption={File config.json cho cấu hình API URL runtime}]
+{
+    "apiUrl": "http://192.168.1.100:8000/api"
+}
+\end{lstlisting}
+
+Thứ tự ưu tiên phân giải API URL:
+\begin{enumerate}
+    \item \textbf{Runtime config}: Đọc từ \texttt{./config.json} (có thể sửa sau khi build)
+    \item \textbf{Build-time env}: Biến môi trường \texttt{VITE\_API\_URL} lúc build
+    \item \textbf{Same-host fallback}: \texttt{\{window.location.origin\}/api}
+\end{enumerate}
+
+% ============================================================================
+%            PHẦN 7: TRIỂN KHAI VÀ VẬN HÀNH
+% ============================================================================
+\newpage
+\section{Triển khai và vận hành}
+
+\subsection{Quy trình triển khai Server}
+
+\begin{enumerate}[label=\textbf{Bước \arabic*:}, leftmargin=3cm]
+    \item \textbf{Cài đặt NVIDIA Driver + CUDA Toolkit 12.4}
+    \begin{lstlisting}[language=bash]
+# Ubuntu
+sudo apt update
+sudo apt install nvidia-driver-550
+# Reboot, then install CUDA 12.4
+    \end{lstlisting}
+    
+    \item \textbf{Cài đặt Python 3.12 và tạo virtual environment}
+    \begin{lstlisting}[language=bash]
+python -m venv .my-env
+source .my-env/bin/activate  # Linux
+.my-env\Scripts\activate     # Windows
+    \end{lstlisting}
+    
+    \item \textbf{Cài đặt PyTorch với CUDA}
+    \begin{lstlisting}[language=bash]
+pip install torch==2.6.0+cu124 \
+    torchvision==0.21.0+cu124 \
+    torchaudio==2.6.0+cu124 \
+    --index-url https://download.pytorch.org/whl/cu124
+    \end{lstlisting}
+    
+    \item \textbf{Cài đặt dependencies}
+    \begin{lstlisting}[language=bash]
+pip install -r requirements.txt
+pip install bitsandbytes  # Linux only, for quantization
+    \end{lstlisting}
+    
+    \item \textbf{Tải mô hình TranslateGemma-27B-IT}
+    \begin{lstlisting}[language=bash]
+# Set Hugging Face token (required for gated model)
+export HF_TOKEN=hf_xxxxxxxxxxxxxx
+python download_model.py
+    \end{lstlisting}
+    
+    \item \textbf{Khởi chạy Server}
+    \begin{lstlisting}[language=bash]
+cd backend
+python main.py
+# Server starts at http://0.0.0.0:8000
+    \end{lstlisting}
+\end{enumerate}
+
+\subsection{Quy trình triển khai Client}
+
+\begin{enumerate}[label=\textbf{Bước \arabic*:}, leftmargin=3cm]
+    \item \textbf{Build Frontend (trên máy phát triển)}
+    \begin{lstlisting}[language=bash]
+cd frontend
+npm install    # hoặc: bun install
+npm run build  # Tạo thư mục dist/
+    \end{lstlisting}
+    
+    \item \textbf{Cấu hình API URL}
+    
+    Sửa file \texttt{dist/config.json} trỏ đến địa chỉ Server:
+    \begin{lstlisting}[language=json]
+{ "apiUrl": "http://<server-ip>:8000/api" }
+    \end{lstlisting}
+    
+    \item \textbf{Phân phối cho Client}
+    
+    Chỉ cần gửi đường dẫn URL hoặc deploy \texttt{dist/} lên web server (nginx, Apache).
+    Client mở trình duyệt và truy cập.
+\end{enumerate}
+
+\subsection{Triển khai Offline}
+
+Dự án hỗ trợ đóng gói toàn bộ để triển khai trên máy không có Internet:
+
+\begin{table}[H]
+\centering
+\caption{Thành phần trong gói offline}
+\label{tab:offline_package}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{|l|X|c|}
+\hline
+\rowcolor{primaryblue!10}
+\textbf{Thư mục} & \textbf{Nội dung} & \textbf{Kích thước} \\
+\hline
+\texttt{backend/} & Mã nguồn Python & $\sim$50 KB \\
+\hline
+\texttt{frontend\_dist/} & Frontend đã build (HTML/CSS/JS) & $\sim$500 KB \\
+\hline
+\texttt{packages/} & Python wheels (.whl) & $\sim$2--3 GB \\
+\hline
+\texttt{model\_cache/} & Trọng số mô hình TranslateGemma-27B & $\sim$54 GB \\
+\hline
+\texttt{setup.bat/.sh} & Script cài đặt tự động & $\sim$5 KB \\
+\hline
+\textbf{Tổng cộng} & & \textbf{$\sim$56--58 GB} \\
+\hline
+\end{tabularx}
+\end{table}
+
+\begin{warnbox}[Gói offline cho mô hình 27B rất lớn]
+Với mô hình 27B (FP16), trọng số nặng khoảng 54~GB. Khi đóng gói offline:
+\begin{itemize}
+    \item Tổng dung lượng gói: $\sim$56--58~GB
+    \item Cần USB/ổ cứng di động $\geq$ 64~GB hoặc truyền qua mạng LAN
+    \item Thời gian cài đặt offline: 15--30 phút (phụ thuộc tốc độ ổ cứng)
+    \item So sánh: Gói offline mô hình 4B hiện tại chỉ $\sim$10~GB
+\end{itemize}
+\end{warnbox}
+
+% ============================================================================
+%            PHẦN 8: HIỆU NĂNG VÀ TỐI ƯU
+% ============================================================================
+\newpage
+\section{Hiệu năng và tối ưu hóa}
+
+\subsection{Ước tính tốc độ suy luận (Inference Speed)}
+
+\begin{table}[H]
+\centering
+\caption{Ước tính tốc độ suy luận TranslateGemma-27B-IT}
+\label{tab:inference_speed}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{|l|c|c|X|}
+\hline
+\rowcolor{primaryblue!10}
+\textbf{GPU} & \textbf{Quantization} & \textbf{Tokens/giây} & \textbf{Ghi chú} \\
+\hline
+RTX 4090 (24GB) & NF4 4-bit & $\sim$20--35 & Tốc độ chấp nhận được \\
+\hline
+RTX A6000 (48GB) & INT8 8-bit & $\sim$25--40 & Chất lượng tốt hơn NF4 \\
+\hline
+A100 (80GB) & BF16 & $\sim$40--70 & Hiệu năng production \\
+\hline
+H100 (80GB) & BF16 & $\sim$60--100 & Hiệu năng tối ưu nhất \\
+\hline
+\end{tabularx}
+\end{table}
+
+\subsection{Ước tính thời gian dịch CSV}
+
+Giả sử trung bình mỗi ô văn bản dài $\sim$50 tokens đầu ra:
+
+\begin{table}[H]
+\centering
+\caption{Thời gian ước tính dịch CSV (TranslateGemma-27B)}
+\label{tab:csv_time}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{|l|c|c|c|c|}
+\hline
+\rowcolor{primaryblue!10}
+\textbf{Số dòng CSV} & \textbf{RTX 4090 (4-bit)} & \textbf{A6000 (8-bit)} & \textbf{A100 (BF16)} & \textbf{H100 (BF16)} \\
+\hline
+100 dòng & $\sim$4--6 phút & $\sim$3--5 phút & $\sim$2--3 phút & $\sim$1--2 phút \\
+\hline
+500 dòng & $\sim$18--25 phút & $\sim$15--20 phút & $\sim$8--12 phút & $\sim$5--8 phút \\
+\hline
+1,000 dòng & $\sim$35--50 phút & $\sim$25--35 phút & $\sim$15--22 phút & $\sim$10--15 phút \\
+\hline
+5,000 dòng & $\sim$3--4 giờ & $\sim$2--3 giờ & $\sim$1--2 giờ & $\sim$45--75 phút \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Các phương pháp tối ưu hiệu năng}
+
+\begin{enumerate}[label=\arabic*., leftmargin=1.5cm]
+    \item \textbf{Quantization-Aware Training (QAT)}: Sử dụng phiên bản QAT INT4 do Google cung cấp, giữ chất lượng tốt hơn Post-Training Quantization (PTQ).
+    
+    \item \textbf{FlashAttention-2}: Tích hợp trong PyTorch $\geq$ 2.6 để giảm bộ nhớ attention và tăng tốc.
+    
+    \item \textbf{torch.compile()}: Biên dịch mô hình với TorchInductor backend để tối ưu hóa graph.
+    
+    \item \textbf{Batching thông minh}: Gom nhiều câu có độ dài tương tự để dịch cùng lúc.
+    
+    \item \textbf{Model Sharding}: Chia mô hình qua nhiều GPU với \texttt{device\_map="auto"} khi dùng Accelerate.
+    
+    \item \textbf{Caching KV}: Tái sử dụng Key-Value cache giữa các request liên tiếp cùng context.
+\end{enumerate}
+
+% ============================================================================
+%            PHẦN 9: BẢO MẬT
+% ============================================================================
+\newpage
+\section{Bảo mật hệ thống}
+
+\subsection{Bảo mật Server}
+
+\begin{itemize}[leftmargin=1.5cm]
+    \item \textbf{CORS Policy}: Hiện đang cho phép tất cả origins (\texttt{allow\_origins=["*"]}). Trong production, nên giới hạn chỉ các domain cụ thể.
+    \item \textbf{HF\_TOKEN}: Token Hugging Face cần được bảo mật trong file \texttt{.env}, không commit vào version control.
+    \item \textbf{File Upload}: Kiểm tra phần mở rộng file (\texttt{.csv}), giới hạn kích thước upload.
+    \item \textbf{HTTPS}: Khuyến nghị sử dụng reverse proxy (nginx) với SSL/TLS certificate.
+    \item \textbf{Firewall}: Chỉ mở port 8000 (hoặc port tùy chỉnh) cho mạng nội bộ.
+    \item \textbf{Rate Limiting}: Nên thêm rate limiter để tránh quá tải server.
+\end{itemize}
+
+\subsection{Bảo mật Client}
+
+\begin{itemize}[leftmargin=1.5cm]
+    \item Frontend là ứng dụng static (HTML/CSS/JS), không chứa logic nhạy cảm.
+    \item Dữ liệu dịch được gửi qua HTTP request --- cần HTTPS trong môi trường production.
+    \item \texttt{config.json} chứa API URL, có thể bị sửa đổi --- cần validate ở server-side.
+\end{itemize}
+
+% ============================================================================
+%            PHẦN 10: KẾT LUẬN
+% ============================================================================
+\newpage
+\section{Kết luận}
+
+\subsection{Tổng kết}
+
+Dự án CSV Translator Pro sử dụng mô hình \textbf{google/translategemma-27b-it} là một hệ thống dịch thuật AI mạnh mẽ với kiến trúc Client--Server rõ ràng:
+
+\begin{itemize}
+    \item \textbf{Server}: Đòi hỏi phần cứng chuyên dụng, đặc biệt GPU với VRAM lớn ($\geq$24~GB). Phần mềm bao gồm FastAPI, PyTorch, Hugging Face Transformers, và hệ sinh thái CUDA. Mô hình 27B cho chất lượng dịch thuật vượt trội so với phiên bản 4B, nhưng đánh đổi bằng yêu cầu tài nguyên cao hơn đáng kể.
+    
+    \item \textbf{Client}: Nhẹ nhàng, chỉ cần trình duyệt web hiện đại. Frontend được xây dựng với React~19 và Vite~7, giao tiếp với server qua REST API. Hỗ trợ 3 chế độ dịch: CSV hàng loạt, văn bản trực tiếp, và OCR từ ảnh.
+\end{itemize}
+
+\subsection{So sánh khi nâng cấp từ 4B lên 27B}
+
+\begin{table}[H]
+\centering
+\caption{So sánh tổng quan 4B vs 27B}
+\label{tab:4b_vs_27b}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{|l|X|X|}
+\hline
+\rowcolor{primaryblue!10}
+\textbf{Tiêu chí} & \textbf{TranslateGemma-4B} & \textbf{TranslateGemma-27B} \\
+\hline
+Chất lượng (MetricX) & 5.32 & \textbf{3.09} (tốt hơn 42\%) \\
+\hline
+VRAM tối thiểu & $\sim$3~GB (4-bit) & $\sim$18~GB (4-bit) \\
+\hline
+VRAM khuyến nghị & 8--16~GB & 24--48~GB \\
+\hline
+GPU tối thiểu & RTX 3060 Ti (8GB) & RTX 3090/4090 (24GB) \\
+\hline
+Tốc độ & Nhanh & Chậm hơn $\sim$3--5$\times$ \\
+\hline
+Gói offline & $\sim$10~GB & $\sim$56--58~GB \\
+\hline
+Chi phí Server & \$1,500--3,000 & \$3,000--30,000 \\
+\hline
+Client thay đổi & \multicolumn{2}{c|}{Không thay đổi --- chỉ cần trình duyệt web} \\
+\hline
+\end{tabularx}
+\end{table}
+
+\subsection{Khuyến nghị}
+
+\begin{enumerate}
+    \item \textbf{Nếu ưu tiên chất lượng dịch}: Nâng cấp lên 27B với GPU A6000 (48~GB) + INT8 quantization.
+    \item \textbf{Nếu ưu tiên tốc độ + chi phí}: Giữ nguyên 4B hoặc xem xét 12B (cân bằng).
+    \item \textbf{Production deployment}: A100/H100 80~GB với BF16 để có cả chất lượng và tốc độ.
+    \item \textbf{Client}: Không cần thay đổi gì --- giao diện web hoạt động giống hệt cho mọi phiên bản mô hình.
+\end{enumerate}
+
+% ============================================================================
+%                       PHỤ LỤC
+% ============================================================================
+\newpage
+\appendix
+
+\section{Phụ lục A: Danh sách 55 ngôn ngữ hỗ trợ}
+
+TranslateGemma-27B-IT hỗ trợ dịch thuật qua 55 ngôn ngữ. Trong cấu hình hiện tại của dự án, các ngôn ngữ sau đã được kích hoạt:
+
+\begin{table}[H]
+\centering
+\caption{Ngôn ngữ được cấu hình trong hệ thống}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{|c|l|c|l|}
+\hline
+\rowcolor{primaryblue!10}
+\textbf{Mã} & \textbf{Ngôn ngữ} & \textbf{Mã} & \textbf{Ngôn ngữ} \\
+\hline
+\texttt{ar} & Tiếng Ả Rập & \texttt{ko} & Tiếng Hàn \\
+\hline
+\texttt{vi} & Tiếng Việt & \texttt{ru} & Tiếng Nga \\
+\hline
+\texttt{en} & Tiếng Anh & \texttt{pt} & Tiếng Bồ Đào Nha \\
+\hline
+\texttt{de-DE} & Tiếng Đức & \texttt{it} & Tiếng Ý \\
+\hline
+\texttt{cs} & Tiếng Séc & \texttt{nl} & Tiếng Hà Lan \\
+\hline
+\texttt{fr} & Tiếng Pháp & \texttt{pl} & Tiếng Ba Lan \\
+\hline
+\texttt{es} & Tiếng Tây Ban Nha & \texttt{tr} & Tiếng Thổ Nhĩ Kỳ \\
+\hline
+\texttt{zh} & Tiếng Trung & \texttt{th} & Tiếng Thái \\
+\hline
+\texttt{ja} & Tiếng Nhật & & \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Phụ lục B: Lệnh kiểm tra phần cứng}
+
+\begin{lstlisting}[language=Python, caption={Script kiểm tra phần cứng GPU}]
+import torch
+print(f"PyTorch version: {torch.__version__}")
+print(f"CUDA available: {torch.cuda.is_available()}")
+if torch.cuda.is_available():
+    print(f"CUDA version: {torch.version.cuda}")
+    print(f"GPU: {torch.cuda.get_device_name(0)}")
+    vram = torch.cuda.get_device_properties(0).total_memory
+    print(f"VRAM: {vram / 1024**3:.1f} GB")
+    print(f"GPU count: {torch.cuda.device_count()}")
+\end{lstlisting}
+
+\section{Phụ lục C: Tài liệu tham khảo}
+
+\begin{enumerate}
+    \item Google Translate Research Team, ``TranslateGemma Technical Report'', arXiv:2601.09012, 2026.
+    \item Google DeepMind, ``Gemma 3 Technical Report'', arXiv:2503.19786, 2025.
+    \item Hugging Face Model Card: \url{https://huggingface.co/google/translategemma-27b-it}
+    \item FastAPI Documentation: \url{https://fastapi.tiangolo.com/}
+    \item PyTorch Documentation: \url{https://pytorch.org/docs/stable/}
+    \item React 19 Documentation: \url{https://react.dev/}
+    \item Vite Documentation: \url{https://vitejs.dev/}
+    \item BitsAndBytes Quantization: \url{https://github.com/TimDettmers/bitsandbytes}
+    \item NVIDIA CUDA Toolkit: \url{https://developer.nvidia.com/cuda-toolkit}
+\end{enumerate}
+
+\end{document}

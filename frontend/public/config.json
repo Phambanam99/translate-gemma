@@ -1,0 +1,4 @@
+{
+  "//": "Runtime config. You can edit this file after build (dist/config.json) to change backend without rebuilding.",
+  "apiUrl": "http://localhost:8000/api"
+}
