@@ -296,14 +296,16 @@ async def startup_event():
     # await loop.run_in_executor(None, get_translator)
     # print("Helsinki-NLP: Ready!")
     
-    # Load TranslateGemma
+    # Load TranslateGemma 27B
     # NOTE:
     # - For gated models, you must be authenticated (HF_TOKEN) OR have all required files already cached locally.
     # - In offline mode, if cache is incomplete, preloading would crash the whole server.
-    print("TranslateGemma 4B: Loading...")
+    print("TranslateGemma 27B: Loading (this will take a few minutes)...")
     try:
         await asyncio.to_thread(lambda: get_gemma_translator()._ensure_loaded())
-        print("TranslateGemma 4B: Ready!")
+        print("=" * 60)
+        print("TranslateGemma 27B: READY — model is on GPU, no user wait!")
+        print("=" * 60)
     except Exception as e:
         print("=" * 60)
         print("[Startup] WARNING: TranslateGemma failed to preload.")
@@ -452,10 +454,13 @@ async def download_file(job_id: str):
 
 @app.get("/api/health")
 async def health_check():
-    """Health check endpoint"""
+    """Health check endpoint — reports model readiness"""
+    translator = get_gemma_translator()
+    model_loaded = translator._model is not None
     return {
-        "status": "ok",
-        "methods": ["helsinki", "gemma"],
+        "status": "ok" if model_loaded else "loading",
+        "model": "translategemma-27b-it",
+        "model_loaded": model_loaded,
         "queue_depth": csv_job_queue.qsize(),
         "cpu_workers": CPU_WORKERS,
         "gpu_concurrency": 1,
@@ -464,5 +469,6 @@ async def health_check():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    port = int(os.environ.get("API_PORT", "8028"))
+    uvicorn.run(app, host="0.0.0.0", port=port)
 

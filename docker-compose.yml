@@ -1,0 +1,85 @@
+services:
+  # ── Backend: FastAPI + GPU inference ────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: translate-gemma-backend
+    
+    # GPU: expose only GPU 2 to the container
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ["2"]
+              capabilities: [gpu]
+    
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=2
+      - CUDA_VISIBLE_DEVICES=0
+      - GPU_DEVICE_ID=0
+      - TRANSFORMERS_CACHE=/app/model_cache
+      - HF_HOME=/app/model_cache
+    
+    # NO host port — only reachable from frontend container via internal network
+    expose:
+      - "8028"
+    
+    volumes:
+      - model_cache:/app/model_cache
+      - uploads:/app/uploads
+      - outputs:/app/outputs
+    
+    shm_size: 16gb
+    restart: unless-stopped
+    
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8028/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 300s
+    
+    networks:
+      - app
+    
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "3"
+
+  # ── Frontend: Nginx (static + reverse proxy /api → backend) ────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: translate-gemma-frontend
+    
+    # Single port exposed to host
+    ports:
+      - "8028:80"
+    
+    restart: unless-stopped
+    
+    depends_on:
+      backend:
+        condition: service_healthy
+    
+    networks:
+      - app
+    
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+
+volumes:
+  model_cache:
+  uploads:
+  outputs:
+
+networks:
+  app:

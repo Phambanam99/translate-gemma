@@ -1,7 +1,7 @@
 """
-Translation service using Google TranslateGemma from Hugging Face
+Translation service using Google TranslateGemma 27B from Hugging Face
 Supports text translation and image OCR translation
-Uses 4-bit quantization to fit in 8GB GPU (RTX 3060 Ti etc.)
+Runs full-precision bfloat16 on A100 80GB GPU (~55GB VRAM)
 
 Bypasses HF pipeline() to call model.generate() directly for:
 - Full control over GenerationConfig (no max_length=20 conflicts)
@@ -22,12 +22,11 @@ from PIL import Image
 from transformers import (
     AutoModelForImageTextToText,
     AutoProcessor,
-    BitsAndBytesConfig,
     GenerationConfig,
 )
 
-# Model selection
-MODEL_NAME = "google/translategemma-4b-it"
+# Model selection — 27B full precision (bfloat16) on A100 80GB
+MODEL_NAME = os.environ.get("MODEL_NAME", "google/translategemma-27b-it")
 
 # Language codes supported by TranslateGemma
 SUPPORTED_LANGUAGES = {
@@ -56,27 +55,23 @@ class GemmaTranslationService:
         torch_version = torch.__version__
         print(f"[Gemma] PyTorch version: {torch_version}")
 
+        # Get GPU device ID from environment variable (default: 0)
+        try:
+            self.gpu_id = int(os.environ.get("GPU_DEVICE_ID", "0"))
+        except (ValueError, TypeError):
+            self.gpu_id = 0
+
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         print(f"[Gemma] Using device: {self.device}")
 
         if self.device == "cuda":
+            torch.cuda.set_device(self.gpu_id)
             vram_gb = round(
-                torch.cuda.get_device_properties(0).total_memory / 1024**3, 1
+                torch.cuda.get_device_properties(self.gpu_id).total_memory / 1024**3, 1
             )
-            gpu_name = torch.cuda.get_device_name(0)
-            print(f"[Gemma] GPU: {gpu_name} ({vram_gb} GB VRAM)")
-
-            if vram_gb < 12:
-                print("[Gemma] VRAM < 12GB -> Using 4-bit quantization (NF4)")
-                self._use_quantization = "4bit"
-            elif vram_gb < 16:
-                print("[Gemma] VRAM < 16GB -> Using 8-bit quantization")
-                self._use_quantization = "8bit"
-            else:
-                print("[Gemma] VRAM >= 16GB -> Using float16 (no quantization)")
-                self._use_quantization = None
-        else:
-            self._use_quantization = None
+            gpu_name = torch.cuda.get_device_name(self.gpu_id)
+            print(f"[Gemma] GPU {self.gpu_id}: {gpu_name} ({vram_gb} GB VRAM)")
+            print(f"[Gemma] Will load {MODEL_NAME} in bfloat16 (no quantization)")
 
         print(f"[Gemma] Model: {MODEL_NAME}")
         self._model: Optional[AutoModelForImageTextToText] = None
@@ -124,27 +119,11 @@ class GemmaTranslationService:
                 MODEL_NAME, **common
             )
 
-            # --- Model ---
+            # --- Model (full bfloat16, no quantization) ---
             model_kwargs = {**common}
-            if self._use_quantization == "4bit":
-                model_kwargs["quantization_config"] = BitsAndBytesConfig(
-                    load_in_4bit=True,
-                    bnb_4bit_compute_dtype=torch.float16,
-                    bnb_4bit_quant_type="nf4",
-                    bnb_4bit_use_double_quant=True,
-                )
-                model_kwargs["device_map"] = "auto"
-                print("[Gemma] Loading with 4-bit NF4 quantization...")
-            elif self._use_quantization == "8bit":
-                model_kwargs["quantization_config"] = BitsAndBytesConfig(
-                    load_in_8bit=True,
-                )
-                model_kwargs["device_map"] = "auto"
-                print("[Gemma] Loading with 8-bit quantization...")
-            else:
-                model_kwargs["device_map"] = "auto"
-                model_kwargs["torch_dtype"] = torch.float16
-                print("[Gemma] Loading with float16 (no quantization)...")
+            model_kwargs["device_map"] = "auto"
+            model_kwargs["torch_dtype"] = torch.bfloat16
+            print(f"[Gemma] Loading {MODEL_NAME} in bfloat16 (full precision)...")
 
             try:
                 self._model = AutoModelForImageTextToText.from_pretrained(

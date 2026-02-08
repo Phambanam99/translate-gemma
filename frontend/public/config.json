@@ -1,4 +1,4 @@
 {
-  "//": "Runtime config. You can edit this file after build (dist/config.json) to change backend without rebuilding.",
-  "apiUrl": "http://localhost:8000/api"
+  "//": "Runtime config — edit dist/config.json after build to change without rebuilding.",
+  "apiUrl": "/api"
 }
