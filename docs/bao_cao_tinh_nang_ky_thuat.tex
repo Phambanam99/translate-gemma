@@ -1,0 +1,969 @@
+% ============================================================================
+% BÁO CÁO TÍNH NĂNG CHIẾN LƯỢC KỸ THUẬT
+% Dự án: CSV Translator Pro - TranslateGemma AI
+% Mục đích: Trình hội đồng phê duyệt kế hoạch thực hiện
+% ============================================================================
+
+\documentclass[a4paper,12pt]{article}
+
+% ======================== PACKAGES ========================
+\usepackage[utf8]{inputenc}
+\usepackage[vietnamese]{babel}
+\usepackage[T5]{fontenc}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{xcolor}
+\usepackage{colortbl}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{amsmath}
+\usepackage{tabularx}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{tcolorbox}
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows.meta, positioning, calc, decorations.pathreplacing}
+
+% ======================== PAGE SETUP ========================
+\geometry{
+    top=2.5cm,
+    bottom=2.5cm,
+    left=3cm,
+    right=2.5cm,
+}
+
+% ======================== COLORS ========================
+\definecolor{primaryblue}{RGB}{25, 55, 109}
+\definecolor{accentgreen}{RGB}{16, 185, 129}
+\definecolor{warningorange}{RGB}{245, 158, 11}
+\definecolor{dangerred}{RGB}{239, 68, 68}
+\definecolor{lightgray}{RGB}{243, 244, 246}
+\definecolor{codebg}{RGB}{248, 249, 250}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+
+% ======================== HEADER/FOOTER ========================
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\textcolor{primaryblue}{Báo cáo tính năng chiến lược kỹ thuật -- CSV Translator Pro}}
+\fancyhead[R]{\small\textcolor{primaryblue}{\thepage}}
+\fancyfoot[C]{\small\textcolor{codegray}{Phần mềm dịch offline AI TranslateGemma -- Trình hội đồng phê duyệt}}
+\renewcommand{\headrulewidth}{0.5pt}
+\renewcommand{\footrulewidth}{0.3pt}
+
+% ======================== LISTING STYLE ========================
+\lstset{
+    backgroundcolor=\color{codebg},
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    captionpos=b,
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{primaryblue}\bfseries,
+    stringstyle=\color{codepurple},
+    numberstyle=\tiny\color{codegray},
+    numbers=left,
+    numbersep=8pt,
+    frame=single,
+    rulecolor=\color{lightgray},
+    tabsize=4,
+    showstringspaces=false,
+}
+
+% ======================== TCOLORBOX STYLES ========================
+\tcbuselibrary{skins, breakable}
+
+\newtcolorbox{infobox}[1][]{
+    colback=blue!5!white,
+    colframe=primaryblue,
+    fonttitle=\bfseries,
+    title=#1,
+    breakable,
+}
+
+\newtcolorbox{warnbox}[1][]{
+    colback=orange!5!white,
+    colframe=warningorange,
+    fonttitle=\bfseries,
+    title=#1,
+    breakable,
+}
+
+\newtcolorbox{successbox}[1][]{
+    colback=green!5!white,
+    colframe=accentgreen,
+    fonttitle=\bfseries,
+    title=#1,
+    breakable,
+}
+
+\newtcolorbox{dangerbox}[1][]{
+    colback=red!5!white,
+    colframe=dangerred,
+    fonttitle=\bfseries,
+    title=#1,
+    breakable,
+}
+
+% ======================== TITLE FORMATTING ========================
+\titleformat{\section}
+    {\Large\bfseries\color{primaryblue}}{\thesection}{1em}{}
+\titleformat{\subsection}
+    {\large\bfseries\color{primaryblue!80}}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}
+    {\normalsize\bfseries\color{primaryblue!60}}{\thesubsubsection}{1em}{}
+
+% ======================== HYPERLINK ========================
+\hypersetup{
+    colorlinks=true,
+    linkcolor=primaryblue,
+    urlcolor=primaryblue,
+    citecolor=primaryblue,
+}
+
+% ============================================================================
+\begin{document}
+
+% ======================== TRANG BÌA ========================
+\begin{titlepage}
+    \centering
+    \vspace*{1.5cm}
+    
+    {\huge\bfseries\textcolor{primaryblue}{BÁO CÁO TÍNH NĂNG}}\\[0.5cm]
+    {\huge\bfseries\textcolor{primaryblue}{CHIẾN LƯỢC KỸ THUẬT}}\\[1cm]
+    
+    {\LARGE\textcolor{primaryblue}{Phần Mềm Dịch Thuật Offline}}\\[0.3cm]
+    {\Large\textcolor{primaryblue}{CSV Translator Pro}}\\[1.5cm]
+    
+    \rule{\textwidth}{1.5pt}\\[0.5cm]
+    {\Large\textbf{Sử dụng mô hình AI TranslateGemma của Google}}\\[0.3cm]
+    {\large Hoạt động hoàn toàn offline -- Hỗ trợ 55 ngôn ngữ}\\[0.3cm]
+    {\large Kiến trúc Client-Server hiện đại}\\[0.5cm]
+    \rule{\textwidth}{1.5pt}\\[1.5cm]
+    
+    \begin{tabular}{rl}
+        \textbf{Mục đích:} & Trình hội đồng phê duyệt kế hoạch thực hiện \\[0.3cm]
+        \textbf{Quy mô triển khai:} & 1000 người dùng \\[0.3cm]
+        \textbf{Mô hình AI:} & TranslateGemma (4B / 27B tham số) \\[0.3cm]
+        \textbf{Công nghệ:} & FastAPI + React + PyTorch + CUDA \\[0.3cm]
+        \textbf{Tổng ngân sách dự kiến:} & 789.800.000 VNĐ \\[0.3cm]
+    \end{tabular}
+    
+    \vfill
+    {\large Ngày lập: \today}
+\end{titlepage}
+
+% ======================== MỤC LỤC ========================
+\tableofcontents
+\newpage
+
+% ============================================================================
+%                     PHẦN 1: TÓM TẮT ĐIỀU HÀNH
+% ============================================================================
+\section{Tóm tắt điều hành (Executive Summary)}
+
+\subsection{Bối cảnh và nhu cầu}
+
+Trong bối cảnh hội nhập quốc tế, đơn vị thường xuyên phải xử lý khối lượng lớn văn bản đa ngôn ngữ, đặc biệt là \textbf{tiếng Ả Rập}. Việc dịch thủ công tốn nhiều thời gian và nguồn lực, trong khi các dịch vụ dịch thuật trực tuyến (Google Translate, DeepL) \textbf{không đáp ứng yêu cầu bảo mật} vì dữ liệu phải gửi qua Internet.
+
+\subsection{Giải pháp đề xuất}
+
+Triển khai hệ thống \textbf{CSV Translator Pro} --- phần mềm dịch thuật AI \textbf{hoàn toàn offline}, đáp ứng:
+
+\begin{itemize}[leftmargin=1.5cm]
+    \item \textbf{Bảo mật tuyệt đối}: Dữ liệu không rời khỏi mạng nội bộ
+    \item \textbf{Dịch hàng loạt}: Xử lý file CSV chứa hàng nghìn dòng văn bản
+    \item \textbf{Chất lượng cao}: Sử dụng mô hình AI tiên tiến của Google
+    \item \textbf{Đa ngôn ngữ}: Hỗ trợ 55 ngôn ngữ, đặc biệt tốt với tiếng Ả Rập
+\end{itemize}
+
+\subsection{Điểm nhấn chiến lược}
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.4}
+\begin{tabularx}{\textwidth}{|l|X|}
+\hline
+\rowcolor{primaryblue!10}
+\textbf{Tiêu chí} & \textbf{Giá trị} \\
+\hline
+Tổng ngân sách & \textbf{789.800.000 VNĐ} (bao gồm phần cứng + triển khai + dự phòng 10\%) \\
+\hline
+Thời gian triển khai & \textbf{6 tuần} (từ khảo sát đến nghiệm thu) \\
+\hline
+Số người dùng & \textbf{1000 người} (mở rộng được) \\
+\hline
+Mô hình AI & \textbf{TranslateGemma-27B} (27 tỷ tham số, chất lượng production) \\
+\hline
+GPU Server & \textbf{NVIDIA A100 80GB} (chạy full precision BF16) \\
+\hline
+Khả năng offline & \textbf{100\%} (sau khi tải model lần đầu) \\
+\hline
+\end{tabularx}
+\end{table}
+
+\begin{successbox}[Khuyến nghị của đội dự án]
+Đề xuất hội đồng \textbf{phê duyệt kế hoạch} triển khai với cấu hình GPU NVIDIA A100 80GB để đảm bảo:
+\begin{itemize}
+    \item Chất lượng dịch thuật tối ưu (mô hình 27B full precision)
+    \item Hiệu năng cao phục vụ 1000 người dùng đồng thời
+    \item Khả năng mở rộng trong tương lai
+    \item Độ tin cậy enterprise với bảo hành dài hạn
+\end{itemize}
+\end{successbox}
+
+% ============================================================================
+%                     PHẦN 2: TÍNH NĂNG CHÍNH
+% ============================================================================
+\newpage
+\section{Tính năng chính của hệ thống}
+
+\subsection{Tổng quan 3 chức năng dịch thuật}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+    node distance=0.8cm,
+    feature/.style={
+        rectangle, rounded corners=8pt, draw=primaryblue, thick,
+        fill=blue!8, text width=13cm, minimum height=1.8cm,
+        font=\small
+    },
+]
+
+\node[feature] (f1) {
+    \textbf{1. DỊCH FILE CSV HÀNG LOẠT}\\[0.2cm]
+    Upload file CSV $\to$ Chọn cột cần dịch $\to$ Chọn ngôn ngữ nguồn/đích $\to$ Theo dõi tiến trình $\to$ Tải file kết quả\\
+    \textit{Ứng dụng: Dịch danh sách tàu thuyền, báo cáo tình báo, dữ liệu Thuraya...}
+};
+
+\node[feature, below=of f1] (f2) {
+    \textbf{2. DỊCH VĂN BẢN TRỰC TIẾP}\\[0.2cm]
+    Nhập văn bản $\to$ Chọn ngôn ngữ $\to$ Nhấn Dịch $\to$ Nhận kết quả ngay\\
+    \textit{Ứng dụng: Dịch tin nhắn, email, đoạn văn ngắn cần xử lý nhanh}
+};
+
+\node[feature, below=of f2] (f3) {
+    \textbf{3. DỊCH VĂN BẢN TỪ ẢNH (OCR)}\\[0.2cm]
+    Upload ảnh $\to$ AI nhận dạng chữ $\to$ Dịch tự động $\to$ Hiển thị kết quả\\
+    \textit{Ứng dụng: Dịch ảnh chụp tài liệu, biển báo, ảnh màn hình}
+};
+
+\end{tikzpicture}
+\caption{Ba chức năng dịch thuật chính của CSV Translator Pro}
+\end{figure}
+
+\subsection{Chi tiết tính năng dịch file CSV}
+
+Đây là tính năng \textbf{chiến lược} của hệ thống, cho phép xử lý hàng loạt dữ liệu:
+
+\begin{table}[H]
+\centering
+\caption{Quy trình dịch file CSV}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{|c|X|X|}
+\hline
+\rowcolor{primaryblue!10}
+\textbf{Bước} & \textbf{Thao tác} & \textbf{Chi tiết kỹ thuật} \\
+\hline
+1 & Upload file CSV & Hỗ trợ file lớn, mã hóa UTF-8, tự động detect header \\
+\hline
+2 & Chọn cột cần dịch & Mặc định cột ``Text'', có thể tùy chỉnh \\
+\hline
+3 & Chọn ngôn ngữ & 55 ngôn ngữ hỗ trợ (Ả Rập, Việt, Anh, Trung, Nhật...) \\
+\hline
+4 & Bắt đầu dịch & Server xử lý bất đồng bộ, không block giao diện \\
+\hline
+5 & Theo dõi tiến trình & Progress bar cập nhật mỗi giây, hiển thị \% và số dòng \\
+\hline
+6 & Tải kết quả & File CSV mới với cột ``Translated\_Text'' thêm vào \\
+\hline
+\end{tabularx}
+\end{table}
+
+\begin{infobox}[Hiệu năng ước tính với GPU A100 80GB]
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{|l|c|c|}
+\hline
+\rowcolor{primaryblue!10}
+\textbf{Số dòng CSV} & \textbf{Thời gian ước tính} & \textbf{Tokens/giây} \\
+\hline
+100 dòng & 2--3 phút & 40--70 \\
+\hline
+500 dòng & 8--12 phút & 40--70 \\
+\hline
+1,000 dòng & 15--22 phút & 40--70 \\
+\hline
+5,000 dòng & 1--2 giờ & 40--70 \\
+\hline
+\end{tabular}
+\end{infobox}
+
+\subsection{Danh sách 55 ngôn ngữ hỗ trợ}
+
+Mô hình TranslateGemma hỗ trợ dịch qua lại giữa \textbf{55 ngôn ngữ}, bao gồm:
+
+\begin{table}[H]
+\centering
+\caption{Các ngôn ngữ được cấu hình sẵn trong hệ thống}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{|c|l||c|l||c|l|}
+\hline
+\rowcolor{primaryblue!10}
+\textbf{Mã} & \textbf{Ngôn ngữ} & \textbf{Mã} & \textbf{Ngôn ngữ} & \textbf{Mã} & \textbf{Ngôn ngữ} \\
+\hline
+\texttt{ar} & Tiếng Ả Rập & \texttt{vi} & Tiếng Việt & \texttt{en} & Tiếng Anh \\
+\hline
+\texttt{zh} & Tiếng Trung & \texttt{ja} & Tiếng Nhật & \texttt{ko} & Tiếng Hàn \\
+\hline
+\texttt{ru} & Tiếng Nga & \texttt{de} & Tiếng Đức & \texttt{fr} & Tiếng Pháp \\
+\hline
+\texttt{es} & Tiếng Tây Ban Nha & \texttt{pt} & Tiếng Bồ Đào Nha & \texttt{it} & Tiếng Ý \\
+\hline
+\texttt{nl} & Tiếng Hà Lan & \texttt{pl} & Tiếng Ba Lan & \texttt{tr} & Tiếng Thổ Nhĩ Kỳ \\
+\hline
+\texttt{th} & Tiếng Thái & \texttt{cs} & Tiếng Séc & \multicolumn{2}{c|}{\textit{... và 38 ngôn ngữ khác}} \\
+\hline
+\end{tabular}
+\end{table}
+
+% ============================================================================
+%                     PHẦN 3: KIẾN TRÚC KỸ THUẬT
+% ============================================================================
+\newpage
+\section{Kiến trúc kỹ thuật hệ thống}
+
+\subsection{Kiến trúc tổng quan Client-Server}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+    node distance=2cm,
+    box/.style={
+        rectangle, rounded corners=5pt, draw=primaryblue, thick,
+        fill=blue!5, text width=3.2cm, minimum height=1.8cm,
+        text centered, font=\small
+    },
+    bigbox/.style={
+        rectangle, rounded corners=5pt, draw=primaryblue, thick,
+        fill=blue!5, text width=3.5cm, minimum height=2cm,
+        text centered, font=\small
+    },
+    arrow/.style={-{Stealth[length=3mm]}, thick, primaryblue}
+]
+
+% Clients
+\node[box] (client1) {
+    \textbf{CLIENTS}\\[0.1cm]
+    1000 trình duyệt Web\\
+    Chrome / Edge / Firefox
+};
+
+% Server
+\node[bigbox, right=2.5cm of client1] (server) {
+    \textbf{SERVER}\\[0.1cm]
+    FastAPI + Uvicorn\\
+    Python 3.12\\
+    CORS enabled
+};
+
+% AI Model
+\node[bigbox, right=2.5cm of server] (model) {
+    \textbf{AI MODEL}\\[0.1cm]
+    TranslateGemma-27B\\
+    PyTorch 2.6 + CUDA\\
+    Hugging Face
+};
+
+% GPU
+\node[box, below=1.5cm of model] (gpu) {
+    \textbf{GPU SERVER}\\[0.1cm]
+    NVIDIA A100 80GB\\
+    HBM2e 2TB/s
+};
+
+% LAN label
+\node[draw=accentgreen, thick, rounded corners=4pt, fill=green!5, 
+      minimum width=2cm, minimum height=0.6cm, font=\footnotesize,
+      above=1cm of server] (lan) {
+    \textbf{Mạng LAN 1--10 Gbps}
+};
+
+% Arrows
+\draw[arrow] (client1) -- node[above, font=\footnotesize] {HTTP API} (server);
+\draw[arrow] (server) -- node[above, font=\footnotesize] {Inference} (model);
+\draw[arrow] (model) -- (gpu);
+
+\end{tikzpicture}
+\caption{Sơ đồ kiến trúc hệ thống CSV Translator Pro}
+\end{figure}
+
+\subsection{Stack công nghệ}
+
+\begin{table}[H]
+\centering
+\caption{Công nghệ sử dụng trong hệ thống}
+\renewcommand{\arraystretch}{1.4}
+\begin{tabularx}{\textwidth}{|l|l|X|}
+\hline
+\rowcolor{primaryblue!10}
+\textbf{Thành phần} & \textbf{Công nghệ} & \textbf{Mô tả} \\
+\hline
+\multicolumn{3}{|c|}{\cellcolor{accentgreen!15}\textbf{Backend (Server)}} \\
+\hline
+Framework web & FastAPI & Framework Python hiệu năng cao, async native \\
+\hline
+ASGI Server & Uvicorn & Xử lý requests đồng thời, production-ready \\
+\hline
+ML Framework & PyTorch 2.6 & Deep learning framework của Meta \\
+\hline
+Model Loading & Hugging Face Transformers & Quản lý và chạy mô hình AI \\
+\hline
+Quantization & bitsandbytes & Lượng tử hóa 4-bit/8-bit giảm VRAM \\
+\hline
+\multicolumn{3}{|c|}{\cellcolor{blue!10}\textbf{Frontend (Client)}} \\
+\hline
+UI Library & React 19.2 & Component-based UI framework \\
+\hline
+Build Tool & Vite 7 & Build tool siêu nhanh, Hot Module Replacement \\
+\hline
+\multicolumn{3}{|c|}{\cellcolor{warningorange!10}\textbf{AI Model}} \\
+\hline
+Mô hình chính & TranslateGemma-27B-IT & 27 tỷ tham số, Google research \\
+\hline
+CUDA & 12.4 & GPU acceleration cho NVIDIA \\
+\hline
+\end{tabularx}
+\end{table}
+
+\subsection{API Endpoints}
+
+\begin{table}[H]
+\centering
+\caption{Danh sách API của hệ thống}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{|l|l|X|}
+\hline
+\rowcolor{primaryblue!10}
+\textbf{Method} & \textbf{Endpoint} & \textbf{Chức năng} \\
+\hline
+GET & \texttt{/api/languages} & Lấy danh sách 55 ngôn ngữ hỗ trợ \\
+\hline
+POST & \texttt{/api/translate-text} & Dịch một đoạn văn bản \\
+\hline
+POST & \texttt{/api/translate-image} & OCR + dịch văn bản từ ảnh \\
+\hline
+POST & \texttt{/api/upload} & Upload CSV và bắt đầu dịch hàng loạt \\
+\hline
+GET & \texttt{/api/status/\{job\_id\}} & Kiểm tra tiến trình dịch CSV \\
+\hline
+GET & \texttt{/api/download/\{job\_id\}} & Tải file CSV đã dịch \\
+\hline
+GET & \texttt{/api/health} & Kiểm tra trạng thái hoạt động server \\
+\hline
+\end{tabularx}
+\end{table}
+
+% ============================================================================
+%                     PHẦN 4: MÔ HÌNH AI TRANSLATEGEMMA
+% ============================================================================
+\newpage
+\section{Mô hình AI TranslateGemma}
+
+\subsection{Giới thiệu mô hình}
+
+\textbf{TranslateGemma} là dòng mô hình dịch thuật mới nhất của Google, được xây dựng trên nền tảng kiến trúc \textbf{Gemma 3}. Đây là mô hình \textbf{mã nguồn mở} (Open Source) có thể chạy hoàn toàn offline sau khi tải về.
+
+\begin{table}[H]
+\centering
+\caption{Thông số mô hình TranslateGemma-27B-IT}
+\renewcommand{\arraystretch}{1.4}
+\begin{tabularx}{\textwidth}{|l|X|}
+\hline
+\rowcolor{primaryblue!10}
+\textbf{Thông số} & \textbf{Giá trị} \\
+\hline
+Tên mô hình & \texttt{google/translategemma-27b-it} \\
+\hline
+Số tham số & 27 tỷ (27B) \\
+\hline
+Kiến trúc & Decoder-only Transformer (Gemma 3) \\
+\hline
+Số lớp (Layers) & 46 \\
+\hline
+Hidden Dimension & 4096 \\
+\hline
+Attention Heads & 64 (Grouped-Query Attention) \\
+\hline
+Context Length & 2,048 tokens \\
+\hline
+Số ngôn ngữ hỗ trợ & 55 ngôn ngữ \\
+\hline
+Framework huấn luyện & JAX + ML Pathways (Google TPU) \\
+\hline
+Dữ liệu huấn luyện & 4.3 tỷ tokens (SFT) + 10.2 triệu tokens (RLHF) \\
+\hline
+Giấy phép & Gemma License (mã nguồn mở) \\
+\hline
+\end{tabularx}
+\end{table}
+
+\subsection{So sánh chất lượng dịch thuật}
+
+\begin{table}[H]
+\centering
+\caption{Benchmark so sánh các phiên bản TranslateGemma}
+\renewcommand{\arraystretch}{1.4}
+\begin{tabular}{|l|c|c|c|c|}
+\hline
+\rowcolor{primaryblue!10}
+\textbf{Benchmark} & \textbf{4B} & \textbf{12B} & \textbf{27B} & \textbf{Ghi chú} \\
+\hline
+WMT24++ MetricX $\downarrow$ & 5.32 & 3.60 & \textbf{3.09} & Thấp hơn = tốt hơn \\
+\hline
+WMT24++ COMET $\uparrow$ & 81.6 & 83.5 & \textbf{84.4} & Cao hơn = tốt hơn \\
+\hline
+Vistra MetricX $\downarrow$ & 2.57 & 2.08 & \textbf{1.57} & Đánh giá đa ngôn ngữ \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{successbox}[Lợi ích của mô hình 27B]
+Mô hình TranslateGemma-27B cho \textbf{chất lượng dịch thuật vượt trội}:
+\begin{itemize}
+    \item Giảm 42\% lỗi dịch so với phiên bản 4B (MetricX 5.32 $\to$ 3.09)
+    \item Xử lý tốt các ngữ cảnh phức tạp, thuật ngữ chuyên ngành
+    \item Đặc biệt hiệu quả với tiếng Ả Rập (ngôn ngữ khó)
+    \item Hỗ trợ OCR từ ảnh với độ chính xác cao
+\end{itemize}
+\end{successbox}
+
+\subsection{Yêu cầu VRAM theo phương pháp lượng tử hóa}
+
+\begin{table}[H]
+\centering
+\caption{Yêu cầu VRAM GPU cho mô hình 27B}
+\renewcommand{\arraystretch}{1.4}
+\begin{tabularx}{\textwidth}{|l|c|c|X|}
+\hline
+\rowcolor{primaryblue!10}
+\textbf{Phương pháp} & \textbf{VRAM Model} & \textbf{VRAM Thực tế} & \textbf{Ghi chú} \\
+\hline
+FP16 / BF16 (Full) & $\sim$54 GB & $\sim$58--62 GB & Chất lượng tốt nhất, cần A100/H100 \\
+\hline
+INT8 (8-bit) & $\sim$27 GB & $\sim$30--34 GB & Giảm nhẹ chất lượng, cần A6000 48GB \\
+\hline
+NF4 (4-bit) & $\sim$14 GB & $\sim$18--22 GB & Giảm chất lượng, chạy được RTX 4090 \\
+\hline
+\end{tabularx}
+\end{table}
+
+% ============================================================================
+%                     PHẦN 5: CẤU HÌNH PHẦN CỨNG
+% ============================================================================
+\newpage
+\section{Cấu hình phần cứng đề xuất}
+
+\subsection{Cấu hình Server với GPU A100 80GB}
+
+Đây là cấu hình được \textbf{khuyến nghị} cho triển khai production với 1000 người dùng:
+
+\begin{table}[H]
+\centering
+\caption{Chi tiết cấu hình Server GPU NVIDIA A100 80GB}
+\renewcommand{\arraystretch}{1.4}
+\begin{tabularx}{\textwidth}{|l|X|c|r|}
+\hline
+\rowcolor{primaryblue!10}
+\textbf{Thành phần} & \textbf{Thông số kỹ thuật} & \textbf{SL} & \textbf{Thành tiền (VNĐ)} \\
+\hline
+GPU & NVIDIA A100 80GB PCIe (HBM2e, 2TB/s) & 1 & 450.000.000 \\
+\hline
+CPU & AMD EPYC 7313 (16C/32T, 3.0GHz) & 1 & 55.000.000 \\
+\hline
+Mainboard & Supermicro H12SSL-i (SP3 Socket) & 1 & 25.000.000 \\
+\hline
+RAM & DDR4-3200 ECC REG 128GB (8x16GB) & 1 bộ & 35.000.000 \\
+\hline
+SSD & NVMe Gen4 2TB (Samsung PM9A3 Enterprise) & 1 & 12.000.000 \\
+\hline
+PSU & 1200W 80+ Platinum Redundant & 1 & 8.000.000 \\
+\hline
+Case & 4U Rackmount Server Chassis & 1 & 10.000.000 \\
+\hline
+Cooling & Hệ thống tản nhiệt Server & 1 & 5.000.000 \\
+\hline
+UPS & 3000VA Online Double Conversion & 1 & 25.000.000 \\
+\hline
+\multicolumn{3}{|r|}{\textbf{Tổng chi phí phần cứng}} & \textbf{625.000.000} \\
+\hline
+\end{tabularx}
+\end{table}
+
+\begin{successbox}[Tại sao chọn NVIDIA A100 80GB?]
+\begin{itemize}
+    \item \textbf{VRAM 80GB HBM2e}: Chạy mô hình 27B với Full Precision BF16 --- không cần quantization, chất lượng dịch tối ưu
+    \item \textbf{Tensor Cores thế hệ 3}: Tăng tốc inference AI lên 312 TFLOPS
+    \item \textbf{Băng thông 2TB/s}: Xử lý batch lớn không bị bottleneck
+    \item \textbf{ECC Memory}: Đảm bảo độ chính xác tính toán
+    \item \textbf{Thiết kế Datacenter}: Hoạt động 24/7, bảo hành enterprise
+\end{itemize}
+\end{successbox}
+
+\subsection{Yêu cầu máy khách (Client)}
+
+Máy khách \textbf{không cần cấu hình cao} vì toàn bộ AI chạy trên Server:
+
+\begin{table}[H]
+\centering
+\caption{Yêu cầu phần cứng/phần mềm máy khách}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{|l|X|X|}
+\hline
+\rowcolor{primaryblue!10}
+\textbf{Thành phần} & \textbf{Tối thiểu} & \textbf{Khuyến nghị} \\
+\hline
+CPU & Intel Core i3 / AMD Ryzen 3 & Intel Core i5 trở lên \\
+\hline
+RAM & 4 GB & 8 GB \\
+\hline
+Màn hình & 1280$\times$720 & 1920$\times$1080 (Full HD) \\
+\hline
+Trình duyệt & Chrome / Edge / Firefox $\geq$ 90 & Chrome mới nhất \\
+\hline
+Mạng & Kết nối LAN/WiFi đến Server & LAN Gigabit \\
+\hline
+\end{tabularx}
+\end{table}
+
+% ============================================================================
+%                     PHẦN 6: CHI PHÍ DỰ TOÁN
+% ============================================================================
+\newpage
+\section{Chi phí dự toán tổng hợp}
+
+\subsection{Chi phí phần cứng}
+
+\begin{table}[H]
+\centering
+\caption{Dự toán chi phí phần cứng Server}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{|X|r|}
+\hline
+\rowcolor{primaryblue!10}
+\textbf{Hạng mục} & \textbf{Chi phí (VNĐ)} \\
+\hline
+GPU NVIDIA A100 80GB PCIe & 450.000.000 \\
+\hline
+CPU AMD EPYC 7313 & 55.000.000 \\
+\hline
+Mainboard Supermicro H12SSL-i & 25.000.000 \\
+\hline
+RAM 128GB DDR4 ECC & 35.000.000 \\
+\hline
+SSD NVMe 2TB Enterprise & 12.000.000 \\
+\hline
+PSU 1200W Platinum + Case + Cooling & 23.000.000 \\
+\hline
+UPS 3000VA Online & 25.000.000 \\
+\hline
+\textbf{Tổng phần cứng} & \textbf{625.000.000} \\
+\hline
+\end{tabularx}
+\end{table}
+
+\subsection{Chi phí triển khai và đào tạo}
+
+\begin{table}[H]
+\centering
+\caption{Dự toán chi phí triển khai}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{|X|r|}
+\hline
+\rowcolor{primaryblue!10}
+\textbf{Hạng mục} & \textbf{Chi phí (VNĐ)} \\
+\hline
+Triển khai phần mềm (cài đặt, cấu hình, kiểm thử 2 tuần) & 30.000.000 \\
+\hline
+Đào tạo quản trị viên (2--3 người, 2 ngày) & 5.000.000 \\
+\hline
+Đào tạo người dùng (1000 người, 10 đợt) & 50.000.000 \\
+\hline
+Tài liệu hướng dẫn (biên soạn, in ấn) & 3.000.000 \\
+\hline
+Hỗ trợ kỹ thuật ban đầu (1 tháng sau nghiệm thu) & 5.000.000 \\
+\hline
+\textbf{Tổng triển khai \& đào tạo} & \textbf{93.000.000} \\
+\hline
+\end{tabularx}
+\end{table}
+
+\subsection{Tổng hợp ngân sách}
+
+\begin{table}[H]
+\centering
+\caption{Tổng hợp ngân sách dự án}
+\renewcommand{\arraystretch}{1.5}
+\begin{tabular}{|l|r|}
+\hline
+\rowcolor{primaryblue!10}
+\textbf{Hạng mục} & \textbf{Chi phí (VNĐ)} \\
+\hline
+Phần cứng Server (A100 80GB + hệ thống) & 625.000.000 \\
+\hline
+Triển khai \& Đào tạo & 93.000.000 \\
+\hline
+Dự phòng (10\%) & 71.800.000 \\
+\hline
+\rowcolor{accentgreen!20}
+\textbf{TỔNG CỘNG} & \textbf{789.800.000} \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{infobox}[Phân tích chi phí theo đầu người sử dụng]
+\begin{itemize}
+    \item Tổng chi phí: \textbf{789.800.000 VNĐ} cho 1000 người sử dụng
+    \item Chi phí trung bình: \textbf{789.800 VNĐ/người} (đầu tư 1 lần)
+    \item Chi phí phần mềm: \textbf{Miễn phí} (mã nguồn mở Google)
+    \item Chi phí vận hành: Chỉ điện năng + bảo trì thường xuyên
+    \item So sánh: Dịch vụ dịch thuật trung bình \textbf{200.000 VNĐ/1000 từ}
+\end{itemize}
+\end{infobox}
+
+% ============================================================================
+%                     PHẦN 7: TIMELINE TRIỂN KHAI
+% ============================================================================
+\newpage
+\section{Kế hoạch thời gian triển khai}
+
+\subsection{Tổng quan 5 giai đoạn (6 tuần)}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+    node distance=0.5cm,
+    phase/.style={
+        rectangle, rounded corners=5pt, draw=primaryblue, thick,
+        fill=blue!8, text width=14cm, minimum height=1.4cm,
+        font=\small
+    },
+    arrow/.style={-{Stealth[length=2mm]}, thick, primaryblue!60}
+]
+
+\node[phase] (p1) {\textbf{Giai đoạn 1: Chuẩn bị} (Tuần 1--2)\\
+Khảo sát hạ tầng, đặt mua phần cứng, chuẩn bị tài liệu, nhận thiết bị};
+
+\node[phase, below=of p1] (p2) {\textbf{Giai đoạn 2: Triển khai Server} (Tuần 3)\\
+Lắp đặt, cài OS/Driver/CUDA, cài Python/PyTorch, tải mô hình AI, cấu hình mạng};
+
+\node[phase, below=of p2] (p3) {\textbf{Giai đoạn 3: Đóng gói \& Kiểm thử} (Tuần 4)\\
+Build Frontend, đóng gói offline, kiểm thử đầy đủ, sửa lỗi \& tối ưu};
+
+\node[phase, below=of p3] (p4) {\textbf{Giai đoạn 4: Đào tạo} (Tuần 5)\\
+Đào tạo quản trị viên, đào tạo 1000 người dùng (10 đợt), giải đáp thắc mắc};
+
+\node[phase, below=of p4] (p5) {\textbf{Giai đoạn 5: Nghiệm thu \& Bàn giao} (Tuần 6)\\
+Kiểm thử UAT, hoàn thiện tài liệu, họp nghiệm thu, ký biên bản, bàn giao};
+
+\draw[arrow] (p1) -- (p2);
+\draw[arrow] (p2) -- (p3);
+\draw[arrow] (p3) -- (p4);
+\draw[arrow] (p4) -- (p5);
+
+\end{tikzpicture}
+\caption{Sơ đồ 5 giai đoạn triển khai trong 6 tuần}
+\end{figure}
+
+\subsection{Nhân sự triển khai}
+
+\begin{table}[H]
+\centering
+\caption{Đội ngũ triển khai dự án}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{|c|l|X|c|}
+\hline
+\rowcolor{primaryblue!10}
+\textbf{STT} & \textbf{Vai trò} & \textbf{Trách nhiệm} & \textbf{Số lượng} \\
+\hline
+1 & Quản lý dự án (PM) & Điều phối, báo cáo tiến độ, giao tiếp các bên & 1 \\
+\hline
+2 & KTV Phần cứng & Lắp đặt Server, kiểm tra thiết bị & 1 \\
+\hline
+3 & KTV Hệ thống & Cài đặt OS, Driver, CUDA & 1 \\
+\hline
+4 & KTV Phần mềm & Cài đặt ứng dụng, cấu hình, debug & 1--2 \\
+\hline
+5 & KTV Mạng & Cấu hình mạng, firewall, IP & 1 \\
+\hline
+6 & QA/Tester & Kiểm thử chức năng, hiệu năng & 1 \\
+\hline
+7 & Đào tạo viên & Đào tạo người dùng cuối & 1--2 \\
+\hline
+\multicolumn{3}{|r|}{\textbf{Tổng cộng}} & \textbf{8--10 người} \\
+\hline
+\end{tabularx}
+\end{table}
+
+% ============================================================================
+%                     PHẦN 8: RỦI RO VÀ GIẢM THIỂU
+% ============================================================================
+\newpage
+\section{Đánh giá rủi ro và phương án giảm thiểu}
+
+\subsection{Ma trận rủi ro}
+
+\begin{table}[H]
+\centering
+\caption{Đánh giá các rủi ro chính}
+\renewcommand{\arraystretch}{1.4}
+\footnotesize
+\begin{tabularx}{\textwidth}{|c|X|c|c|X|}
+\hline
+\rowcolor{primaryblue!10}
+\textbf{ID} & \textbf{Rủi ro} & \textbf{Xác suất} & \textbf{Mức} & \textbf{Phương án giảm thiểu} \\
+\hline
+R1 & Chậm giao hàng GPU A100 & TB & \cellcolor{warningorange!30}Cao & Đặt hàng sớm, có 2--3 nhà cung cấp dự phòng \\
+\hline
+R2 & GPU lỗi hoặc không tương thích & Thấp & \cellcolor{yellow!30}TB & Kiểm tra kỹ trước mua, yêu cầu bảo hành \\
+\hline
+R3 & Mạng LAN không ổn định & Thấp & \cellcolor{green!20}Thấp & Khảo sát và nâng cấp mạng trước triển khai \\
+\hline
+R4 & Mất điện đột ngột & Thấp & \cellcolor{yellow!30}TB & UPS 3000VA + yêu cầu generator dự phòng \\
+\hline
+R5 & Người dùng khó tiếp cận & TB & \cellcolor{green!20}Thấp & Đào tạo kỹ, tài liệu đơn giản, video hướng dẫn \\
+\hline
+R6 & Bảo mật: Truy cập trái phép & Thấp & \cellcolor{yellow!30}TB & Firewall, chỉ mở trong LAN, không public \\
+\hline
+\end{tabularx}
+\end{table}
+
+\subsection{Phương án dự phòng GPU}
+
+\begin{warnbox}[Nếu không mua được A100 80GB]
+Trong trường hợp GPU A100 80GB không khả dụng hoặc vượt ngân sách:
+\begin{itemize}
+    \item \textbf{Phương án B}: RTX A6000 48GB + INT8 quantization (chi phí $\sim$300 triệu, chất lượng giảm 5--10\%)
+    \item \textbf{Phương án C}: RTX 4090 24GB + NF4 4-bit quantization (chi phí $\sim$100 triệu, chất lượng giảm 15--20\%)
+    \item \textbf{Phương án D}: Sử dụng mô hình TranslateGemma-4B thay vì 27B (chất lượng giảm 40\%, nhưng chạy được trên GPU 8GB)
+\end{itemize}
+\end{warnbox}
+
+% ============================================================================
+%                     PHẦN 9: BẢO MẬT VÀ TUÂN THỦ
+% ============================================================================
+\newpage
+\section{Bảo mật và tuân thủ}
+
+\subsection{Cam kết bảo mật dữ liệu}
+
+\begin{table}[H]
+\centering
+\caption{Các biện pháp bảo mật hệ thống}
+\renewcommand{\arraystretch}{1.4}
+\begin{tabularx}{\textwidth}{|l|X|}
+\hline
+\rowcolor{primaryblue!10}
+\textbf{Biện pháp} & \textbf{Chi tiết} \\
+\hline
+\textbf{Hoạt động offline} & Sau khi cài đặt, hệ thống hoạt động 100\% offline, không cần Internet \\
+\hline
+\textbf{Dữ liệu nội bộ} & Tất cả dữ liệu dịch thuật xử lý trong mạng LAN, không gửi ra ngoài \\
+\hline
+\textbf{Firewall} & Chỉ mở port 8000 trong mạng nội bộ, không public ra Internet \\
+\hline
+\textbf{Không lưu log dịch} & Hệ thống không lưu trữ nội dung văn bản đã dịch (chỉ log kỹ thuật) \\
+\hline
+\textbf{Xóa dữ liệu tạm} & File CSV upload được xóa tự động sau 7 ngày \\
+\hline
+\textbf{Không cần đăng nhập} & Truy cập trong LAN (có thể thêm authentication nếu cần) \\
+\hline
+\end{tabularx}
+\end{table}
+
+\begin{successbox}[Điểm mạnh về bảo mật]
+\textbf{So với dịch vụ dịch thuật online (Google Translate, DeepL):}
+\begin{itemize}
+    \item Dữ liệu KHÔNG rời khỏi mạng đơn vị
+    \item Không phụ thuộc Internet --- hoạt động trong mọi điều kiện
+    \item Không lo ngại điều khoản sử dụng của bên thứ ba
+    \item Toàn quyền kiểm soát hệ thống và dữ liệu
+\end{itemize}
+\end{successbox}
+
+% ============================================================================
+%                     PHẦN 10: KẾT LUẬN VÀ ĐỀ XUẤT
+% ============================================================================
+\newpage
+\section{Kết luận và đề xuất}
+
+\subsection{Tóm tắt dự án}
+
+\begin{table}[H]
+\centering
+\caption{Tóm tắt thông tin dự án}
+\renewcommand{\arraystretch}{1.5}
+\begin{tabularx}{\textwidth}{|l|X|}
+\hline
+\rowcolor{primaryblue!10}
+\textbf{Tiêu chí} & \textbf{Nội dung} \\
+\hline
+Tên dự án & CSV Translator Pro -- Phần mềm dịch thuật AI Offline \\
+\hline
+Mục tiêu & Dịch thuật đa ngôn ngữ offline, bảo mật tuyệt đối \\
+\hline
+Quy mô & 1000 người dùng \\
+\hline
+Tổng ngân sách & \textbf{789.800.000 VNĐ} \\
+\hline
+Thời gian triển khai & 6 tuần \\
+\hline
+Công nghệ & TranslateGemma-27B + FastAPI + React \\
+\hline
+GPU đề xuất & NVIDIA A100 80GB (Full Precision BF16) \\
+\hline
+Khả năng offline & 100\% sau khi triển khai \\
+\hline
+\end{tabularx}
+\end{table}
+
+\subsection{Đề xuất hội đồng}
+
+\begin{dangerbox}[ĐỀ XUẤT PHÊ DUYỆT]
+Kính đề xuất Hội đồng \textbf{phê duyệt kế hoạch thực hiện} dự án CSV Translator Pro với các nội dung:
+
+\begin{enumerate}[label=\arabic*.]
+    \item \textbf{Phê duyệt ngân sách}: 789.800.000 VNĐ (bao gồm dự phòng 10\%)
+    \item \textbf{Phê duyệt cấu hình}: GPU NVIDIA A100 80GB + Server workstation
+    \item \textbf{Phê duyệt timeline}: 6 tuần triển khai
+    \item \textbf{Phê duyệt đội ngũ}: 8--10 nhân sự triển khai
+    \item \textbf{Chỉ đạo phối hợp}: Các phòng ban hỗ trợ nhân sự, mạng, điện...
+\end{enumerate}
+\end{dangerbox}
+
+\subsection{Lợi ích khi triển khai}
+
+\begin{itemize}[leftmargin=1.5cm]
+    \item \textbf{Tiết kiệm thời gian}: Dịch tự động hàng nghìn dòng CSV trong vài phút thay vì hàng ngày thủ công
+    \item \textbf{Bảo mật tuyệt đối}: Dữ liệu không bao giờ rời khỏi mạng nội bộ
+    \item \textbf{Chất lượng cao}: Mô hình AI 27 tỷ tham số của Google
+    \item \textbf{Chi phí 1 lần}: Không phí hàng tháng như dịch vụ online
+    \item \textbf{Hoạt động 24/7}: Không phụ thuộc Internet hay dịch vụ bên ngoài
+    \item \textbf{Mở rộng}: Có thể nâng cấp phục vụ nhiều người dùng hơn
+\end{itemize}
+
+\vspace{1cm}
+\begin{center}
+\rule{10cm}{0.5pt}\\[0.5cm]
+\textbf{Kính trình Hội đồng xem xét và phê duyệt}\\[1cm]
+Ngày lập: \today
+\end{center}
+
+\end{document}
