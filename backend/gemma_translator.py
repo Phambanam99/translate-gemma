@@ -300,16 +300,16 @@ class GemmaTranslationService:
         ]
 
     @staticmethod
-    def _estimate_max_tokens(text: str, default: int = 256) -> int:
+    def _estimate_max_tokens(text: str, default: int = 1024) -> int:
         """Estimate max_new_tokens based on input length.
 
         Translation typically produces output of similar length.
-        For short CSV cells we can use much fewer tokens than 256.
+        For short CSV cells we can use much fewer tokens than 1024.
         """
         if not text:
-            return 32
-        # ~1 token per 3-4 chars; output ~1.5x input length; minimum 32
-        estimated = max(32, int(len(text) / 3 * 1.5))
+            return 64
+        # ~1 token per 3-4 chars; output ~1.5x input length; minimum 64
+        estimated = max(64, int(len(text) / 3 * 1.5))
         return min(estimated, default)
 
     def _reset_cuda(self):
@@ -323,17 +323,96 @@ class GemmaTranslationService:
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
+    # Maximum characters per chunk for splitting long text.
+    # ~2000 chars ≈ ~600-700 tokens input, safe for 8K context window.
+    MAX_CHUNK_CHARS = 2000
+
+    def _split_text(self, text: str) -> List[str]:
+        """Split long text into chunks, preserving paragraph/sentence boundaries.
+
+        Strategy:
+        1. Split by double newline (paragraphs) first
+        2. If a paragraph is still too long, split by sentence (. ! ?)
+        3. If a sentence is still too long, split by MAX_CHUNK_CHARS hard cut
+        """
+        import re
+
+        if len(text) <= self.MAX_CHUNK_CHARS:
+            return [text]
+
+        # Step 1: Split by paragraphs (double newline)
+        paragraphs = re.split(r'\n\s*\n', text)
+        chunks: List[str] = []
+
+        for para in paragraphs:
+            para = para.strip()
+            if not para:
+                continue
+            if len(para) <= self.MAX_CHUNK_CHARS:
+                chunks.append(para)
+                continue
+
+            # Step 2: Split long paragraph by sentences
+            # Handles Arabic (.)، English (.!?), and common punctuation
+            sentences = re.split(r'(?<=[.!?。؟])\s+', para)
+            current = ""
+            for sent in sentences:
+                if not sent.strip():
+                    continue
+                if current and len(current) + len(sent) + 1 > self.MAX_CHUNK_CHARS:
+                    chunks.append(current.strip())
+                    current = sent
+                else:
+                    current = (current + " " + sent).strip() if current else sent
+
+                # Step 3: Hard split if single sentence is too long
+                while len(current) > self.MAX_CHUNK_CHARS:
+                    chunks.append(current[:self.MAX_CHUNK_CHARS])
+                    current = current[self.MAX_CHUNK_CHARS:]
+
+            if current.strip():
+                chunks.append(current.strip())
+
+        return chunks if chunks else [text]
+
     def translate_text(
         self,
         text: str,
         source_lang: str = "ar",
         target_lang: str = "vi",
-        max_new_tokens: int = 256,
+        max_new_tokens: int = 1024,
     ) -> str:
-        """Translate a single text string."""
+        """Translate a single text string. Auto-splits long text into chunks."""
         if not text or not text.strip():
             return ""
 
+        chunks = self._split_text(text.strip())
+
+        if len(chunks) == 1:
+            return self._translate_single_chunk(
+                chunks[0], source_lang, target_lang, max_new_tokens
+            )
+
+        # Translate each chunk and join with double newline
+        print(f"[Gemma] Long text split into {len(chunks)} chunks")
+        translated_parts = []
+        for i, chunk in enumerate(chunks):
+            print(f"[Gemma] Translating chunk {i+1}/{len(chunks)} ({len(chunk)} chars)")
+            part = self._translate_single_chunk(
+                chunk, source_lang, target_lang, max_new_tokens
+            )
+            translated_parts.append(part)
+
+        return "\n\n".join(translated_parts)
+
+    def _translate_single_chunk(
+        self,
+        text: str,
+        source_lang: str,
+        target_lang: str,
+        max_new_tokens: int = 1024,
+    ) -> str:
+        """Translate a single chunk that fits within model context."""
         adaptive_tokens = self._estimate_max_tokens(text, max_new_tokens)
         messages = self._build_text_message(text, source_lang, target_lang)
 
@@ -372,7 +451,7 @@ class GemmaTranslationService:
         target_lang: str = "vi",
         progress_callback=None,
         batch_size: int = 20,
-        max_new_tokens: int = 256,
+        max_new_tokens: int = 1024,
     ) -> List[str]:
         """Translate list of texts with TRUE GPU batching.
 
@@ -502,9 +581,9 @@ class GemmaTranslationService:
         image_source: str,
         source_lang: str = "ar",
         target_lang: str = "vi",
-        max_new_tokens: int = 256,
-        max_image_side: int = 1024,
-        jpeg_quality: int = 90,
+        max_new_tokens: int = 1024,
+        max_image_side: int = 2048,
+        jpeg_quality: int = 95,
     ) -> str:
         """Extract and translate text from an image.
 
