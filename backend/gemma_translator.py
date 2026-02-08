@@ -7,6 +7,12 @@ Bypasses HF pipeline() to call model.generate() directly for:
 - Full control over GenerationConfig (no max_length=20 conflicts)
 - Adaptive max_new_tokens (short text = fewer tokens = faster)
 - torch.inference_mode() for lower overhead
+
+Performance optimizations:
+- Flash Attention 2 / SDPA for faster attention computation
+- CUDA TF32 + cuDNN benchmark for faster matmul
+- Length-sorted batching to minimize padding waste
+- Optional torch.compile() for JIT compilation (env TORCH_COMPILE=1)
 """
 import base64
 import math
@@ -67,6 +73,18 @@ class GemmaTranslationService:
 
         if self.device == "cuda":
             torch.cuda.set_device(self.gpu_id)
+
+            # ── CUDA performance flags ──────────────────────────────
+            # TF32: ~2x faster matmul on Ampere+ (A100, A4000, RTX 30xx)
+            # with negligible precision loss for inference
+            torch.backends.cuda.matmul.allow_tf32 = True
+            torch.backends.cudnn.allow_tf32 = True
+            # cuDNN auto-tuner: picks fastest convolution algorithms
+            torch.backends.cudnn.benchmark = True
+            # Allow reduced precision reductions in bf16 matmul
+            torch.backends.cuda.matmul.allow_bf16_reduced_precision_reduction = True
+            print("[Gemma] CUDA flags: TF32=on, cuDNN benchmark=on, bf16 reduction=on")
+
             vram_gb = round(
                 torch.cuda.get_device_properties(self.gpu_id).total_memory / 1024**3, 1
             )
@@ -84,6 +102,32 @@ class GemmaTranslationService:
     # ------------------------------------------------------------------
     # Model loading
     # ------------------------------------------------------------------
+    @staticmethod
+    def _get_best_attn_implementation() -> str:
+        """Detect the fastest available attention implementation.
+
+        Priority: flash_attention_2 > sdpa > eager
+        - flash_attention_2: ~2-3x faster, requires flash-attn package
+        - sdpa: ~1.5-2x faster, built into PyTorch 2.x (no extra install)
+        - eager: baseline
+        """
+        # 1. Try Flash Attention 2 (fastest)
+        try:
+            import flash_attn  # noqa: F401
+            print(f"[Gemma] Flash Attention 2 available (v{flash_attn.__version__})")
+            return "flash_attention_2"
+        except ImportError:
+            pass
+
+        # 2. Try SDPA (built into PyTorch >= 2.0)
+        if hasattr(torch.nn.functional, "scaled_dot_product_attention"):
+            print("[Gemma] Using SDPA (Scaled Dot-Product Attention)")
+            return "sdpa"
+
+        # 3. Fallback
+        print("[Gemma] Using eager attention (consider installing flash-attn)")
+        return "eager"
+
     def _load_model(self):
         """Load model + processor directly (no pipeline wrapper)."""
         if self._model is not None:
@@ -120,30 +164,58 @@ class GemmaTranslationService:
                 MODEL_NAME, **common
             )
 
+            # --- Attention implementation (flash_attention_2 > sdpa > eager) ---
+            attn_impl = self._get_best_attn_implementation()
+
             # --- Model (full bfloat16, no quantization) ---
             model_kwargs = {**common}
             model_kwargs["device_map"] = "auto"
             model_kwargs["torch_dtype"] = torch.bfloat16
-            print(f"[Gemma] Loading {MODEL_NAME} in bfloat16 (full precision)...")
+            model_kwargs["attn_implementation"] = attn_impl
+            print(f"[Gemma] Loading {MODEL_NAME} in bfloat16 (attn={attn_impl})...")
 
             try:
                 self._model = AutoModelForImageTextToText.from_pretrained(
                     MODEL_NAME, **model_kwargs
                 )
             except Exception as e:
-                print(f"[Gemma] GPU load failed: {e}")
-                if offline_mode:
-                    raise RuntimeError(
-                        "Offline mode enabled but model cache incomplete."
-                    ) from e
-                print("[Gemma] Trying CPU fallback...")
-                self._model = AutoModelForImageTextToText.from_pretrained(
-                    MODEL_NAME,
-                    device_map="cpu",
-                    torch_dtype=torch.float32,
-                    **({"token": token} if token else {}),
-                    local_files_only=offline_mode,
-                )
+                error_msg = str(e)
+                # If attention implementation fails, retry without it
+                if "attention" in error_msg.lower() or "flash" in error_msg.lower():
+                    print(f"[Gemma] {attn_impl} failed, retrying with eager attention...")
+                    model_kwargs.pop("attn_implementation", None)
+                    try:
+                        self._model = AutoModelForImageTextToText.from_pretrained(
+                            MODEL_NAME, **model_kwargs
+                        )
+                    except Exception as e2:
+                        print(f"[Gemma] GPU load failed: {e2}")
+                        if offline_mode:
+                            raise RuntimeError(
+                                "Offline mode enabled but model cache incomplete."
+                            ) from e2
+                        print("[Gemma] Trying CPU fallback...")
+                        self._model = AutoModelForImageTextToText.from_pretrained(
+                            MODEL_NAME,
+                            device_map="cpu",
+                            torch_dtype=torch.float32,
+                            **({"token": token} if token else {}),
+                            local_files_only=offline_mode,
+                        )
+                else:
+                    print(f"[Gemma] GPU load failed: {e}")
+                    if offline_mode:
+                        raise RuntimeError(
+                            "Offline mode enabled but model cache incomplete."
+                        ) from e
+                    print("[Gemma] Trying CPU fallback...")
+                    self._model = AutoModelForImageTextToText.from_pretrained(
+                        MODEL_NAME,
+                        device_map="cpu",
+                        torch_dtype=torch.float32,
+                        **({"token": token} if token else {}),
+                        local_files_only=offline_mode,
+                    )
 
             # Build a clean GenerationConfig template (no max_length!)
             eos = getattr(self._model.config, "eos_token_id", 1)
@@ -153,6 +225,19 @@ class GemmaTranslationService:
                 do_sample=False,
                 pad_token_id=eos,
             )
+
+            # ── Optional: torch.compile for JIT speedup ──────────────
+            if os.environ.get("TORCH_COMPILE", "").lower() in ("1", "true"):
+                compile_mode = os.environ.get("TORCH_COMPILE_MODE", "reduce-overhead")
+                print(f"[Gemma] Compiling model with torch.compile(mode='{compile_mode}')...")
+                print("[Gemma] First inference will be slower (JIT compilation warmup).")
+                try:
+                    self._model = torch.compile(
+                        self._model, mode=compile_mode
+                    )
+                    print("[Gemma] torch.compile() applied successfully")
+                except Exception as e:
+                    print(f"[Gemma] torch.compile() failed (non-fatal): {e}")
 
             print("[Gemma] Model loaded successfully!")
 
@@ -224,10 +309,13 @@ class GemmaTranslationService:
             input_lengths = attention_mask.sum(dim=1).tolist()
 
             # Step 3: Single generate() call for the whole batch
+            # Reuse cached gen config; use_cache enables KV-cache for faster
+            # autoregressive decoding (avoids recomputing past key/values)
             gen_config = GenerationConfig(
                 max_new_tokens=max_new_tokens,
                 do_sample=False,
                 pad_token_id=self._gen_config.pad_token_id,
+                use_cache=True,
             )
 
             output_ids = self._model.generate(
@@ -274,6 +362,7 @@ class GemmaTranslationService:
                 max_new_tokens=max_new_tokens,
                 do_sample=False,
                 pad_token_id=self._gen_config.pad_token_id,
+                use_cache=True,
             )
 
             output_ids = self._model.generate(**inputs, generation_config=gen_config)
@@ -495,14 +584,24 @@ class GemmaTranslationService:
         if progress_callback:
             progress_callback(0, 0)
 
+        # ── Length-sorted batching ──────────────────────────────────
+        # Sort texts by character length so similar-length texts are
+        # batched together.  This minimises padding waste in the
+        # tokenised batch (all seqs padded to the longest in batch).
+        sorted_indices = sorted(
+            range(unique_total), key=lambda i: len(unique_texts[i])
+        )
+        sorted_unique = [unique_texts[i] for i in sorted_indices]
+
         print(
             f"[Gemma] Batch: {total} rows, {unique_total} unique, "
-            f"batch_size={batch_size}"
+            f"batch_size={batch_size}, length-sorted=yes"
         )
 
-        # Process in chunks of batch_size
+        # Process in chunks of batch_size (length-sorted)
         for start in range(0, unique_total, batch_size):
-            chunk_texts = unique_texts[start : start + batch_size]
+            chunk_sorted_idx = sorted_indices[start : start + batch_size]
+            chunk_texts = sorted_unique[start : start + batch_size]
             chunk_messages = [
                 self._build_text_message(t, source_lang, target_lang)
                 for t in chunk_texts
@@ -558,9 +657,11 @@ class GemmaTranslationService:
                         self._reset_cuda()
                         translated_chunk.append(f"[Error: {e}]")
 
-            # Write results back
-            for text, translated_text in zip(chunk_texts, translated_chunk):
-                for pos in text_to_positions[text]:
+            # Write results back (map through sorted indices)
+            for j, translated_text in enumerate(translated_chunk):
+                orig_idx = chunk_sorted_idx[j]
+                orig_text = unique_texts[orig_idx]
+                for pos in text_to_positions[orig_text]:
                     results[pos] = translated_text
                     processed_items += 1
                     if progress_callback:

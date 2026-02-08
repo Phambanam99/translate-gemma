@@ -22,15 +22,21 @@ services:
       - TRANSFORMERS_CACHE=/app/model_cache
       - HF_HOME=/app/model_cache
     
+      # ── Performance tuning ──────────────────────────────────────
+      # torch.compile: JIT-compile the model for ~10-30% speedup
+      # (adds ~2-5 min warmup on first inference, then faster)
+      - TORCH_COMPILE=1
+      - TORCH_COMPILE_MODE=reduce-overhead
+      # GPU batch size for CSV translation (higher = faster but more VRAM)
+      - CSV_GPU_BATCH_SIZE=32
     # NO host port — only reachable from frontend container via internal network
     expose:
       - "8028"
     
     volumes:
-      - model_cache:/app/model_cache
-      - uploads:/app/uploads
-      - outputs:/app/outputs
-    
+      - ./model_cache:/app/model_cache
+      - ./uploads:/app/uploads
+      - ./outputs:/app/outputs
     shm_size: 16gb
     restart: unless-stopped
     

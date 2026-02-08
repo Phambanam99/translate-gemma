@@ -1,5 +1,5 @@
 # Single-stage: CUDA runtime + Python — avoids missing .so errors from multi-stage
-FROM nvidia/cuda:12.4.1-cudnn-runtime-ubuntu22.04
+FROM nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04
 
 ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONUNBUFFERED=1 \
@@ -11,7 +11,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates curl git \
     python3 python3-dev python3-pip python3-venv \
-    libjpeg-dev zlib1g-dev \
+    libjpeg-dev zlib1g-dev ninja-build \
     && rm -rf /var/lib/apt/lists/*
 
 # ── Python venv ────────────────────────────────────────────────────────
@@ -22,6 +22,12 @@ RUN pip install --upgrade pip setuptools wheel
 # ── PyTorch (heaviest layer – cached unless base image changes) ────────
 RUN pip install torch==2.6.0 torchvision==0.21.0 torchaudio==2.6.0 \
     --index-url https://download.pytorch.org/whl/cu124
+
+# ── Flash Attention 2 (~2-3x faster attention, optional) ──────────────
+# Uses pre-built wheel when available; compiles from source otherwise.
+# Non-fatal: SDPA (built into PyTorch) is used as automatic fallback.
+RUN pip install flash-attn --no-build-isolation 2>/dev/null \
+    || echo "flash-attn install failed (non-fatal); SDPA will be used instead"
 
 # ── Python deps (changes less often than app code) ─────────────────────
 WORKDIR /app
