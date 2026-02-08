@@ -1,0 +1,835 @@
+% ============================================================================
+% KẾ HOẠCH TRIỂN KHAI PHẦN MỀM DỊCH OFFLINE
+% Dự án: CSV Translator Pro - TranslateGemma AI
+% Quy mô: 100 người dùng
+% ============================================================================
+
+\documentclass[a4paper,12pt]{article}
+
+% ======================== PACKAGES ========================
+\usepackage[utf8]{inputenc}
+\usepackage[vietnamese]{babel}
+\usepackage[T5]{fontenc}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{xcolor}
+\usepackage{colortbl}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{amsmath}
+\usepackage{tabularx}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{tcolorbox}
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows.meta, positioning, calc}
+
+% ======================== PAGE SETUP ========================
+\geometry{
+    top=2.5cm,
+    bottom=2.5cm,
+    left=3cm,
+    right=2.5cm,
+}
+
+% ======================== COLORS ========================
+\definecolor{primaryblue}{RGB}{25, 55, 109}
+\definecolor{accentgreen}{RGB}{16, 185, 129}
+\definecolor{warningorange}{RGB}{245, 158, 11}
+\definecolor{dangerred}{RGB}{239, 68, 68}
+\definecolor{lightgray}{RGB}{243, 244, 246}
+\definecolor{codebg}{RGB}{248, 249, 250}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+
+% ======================== HEADER/FOOTER ========================
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\textcolor{primaryblue}{Kế hoạch triển khai -- CSV Translator Pro}}
+\fancyhead[R]{\small\textcolor{primaryblue}{\thepage}}
+\fancyfoot[C]{\small\textcolor{codegray}{Phần mềm dịch offline -- AI TranslateGemma}}
+\renewcommand{\headrulewidth}{0.5pt}
+\renewcommand{\footrulewidth}{0.3pt}
+
+% ======================== TCOLORBOX STYLES ========================
+\tcbuselibrary{skins, breakable}
+
+\newtcolorbox{infobox}[1][]{
+    colback=blue!5!white,
+    colframe=primaryblue,
+    fonttitle=\bfseries,
+    title=#1,
+    breakable,
+}
+
+\newtcolorbox{warnbox}[1][]{
+    colback=orange!5!white,
+    colframe=warningorange,
+    fonttitle=\bfseries,
+    title=#1,
+    breakable,
+}
+
+\newtcolorbox{successbox}[1][]{
+    colback=green!5!white,
+    colframe=accentgreen,
+    fonttitle=\bfseries,
+    title=#1,
+    breakable,
+}
+
+% ======================== TITLE FORMATTING ========================
+\titleformat{\section}
+    {\Large\bfseries\color{primaryblue}}{\thesection}{1em}{}
+\titleformat{\subsection}
+    {\large\bfseries\color{primaryblue!80}}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}
+    {\normalsize\bfseries\color{primaryblue!60}}{\thesubsubsection}{1em}{}
+
+% ======================== HYPERLINK ========================
+\hypersetup{
+    colorlinks=true,
+    linkcolor=primaryblue,
+    urlcolor=primaryblue,
+}
+
+% ============================================================================
+\begin{document}
+
+% ======================== TRANG BÌA ========================
+\begin{titlepage}
+    \centering
+    \vspace*{2cm}
+    
+    {\Huge\bfseries\textcolor{primaryblue}{KẾ HOẠCH TRIỂN KHAI}}\\[0.8cm]
+    {\LARGE\textcolor{primaryblue}{Phần Mềm Dịch Thuật Offline}}\\[0.5cm]
+    {\Large\textcolor{primaryblue}{CSV Translator Pro}}\\[1.5cm]
+    
+    \rule{\textwidth}{1pt}\\[0.5cm]
+    {\Large\textbf{Sử dụng mô hình AI TranslateGemma}}\\[0.3cm]
+    {\large Hỗ trợ 55 ngôn ngữ -- Hoạt động hoàn toàn offline}\\[0.5cm]
+    \rule{\textwidth}{1pt}\\[2cm]
+    
+    \begin{tabular}{rl}
+        \textbf{Quy mô triển khai:} & 100 người dùng \\[0.3cm]
+        \textbf{Hạ tầng:} & Mua mới GPU Server \\[0.3cm]
+        \textbf{Kiến trúc:} & Client--Server (Web Application) \\[0.3cm]
+        \textbf{Mô hình AI:} & TranslateGemma (4B / 27B tham số) \\[0.3cm]
+    \end{tabular}
+    
+    \vfill
+    {\large Ngày lập: \today}
+\end{titlepage}
+
+% ======================== MỤC LỤC ========================
+\tableofcontents
+\newpage
+
+% ============================================================================
+%                     PHẦN 1: TỔNG QUAN DỰ ÁN
+% ============================================================================
+\section{Tổng quan dự án}
+
+\subsection{Mục tiêu triển khai}
+
+Triển khai hệ thống phần mềm dịch thuật offline \textbf{CSV Translator Pro} cho đơn vị với các mục tiêu:
+
+\begin{enumerate}[label=\arabic*., leftmargin=2cm]
+    \item \textbf{Dịch file CSV hàng loạt}: Hỗ trợ dịch tự động các file CSV chứa dữ liệu đa ngôn ngữ
+    \item \textbf{Dịch văn bản trực tiếp}: Cho phép nhập và dịch văn bản theo thời gian thực
+    \item \textbf{Dịch văn bản từ ảnh (OCR)}: Trích xuất và dịch văn bản nhúng trong hình ảnh
+    \item \textbf{Hoạt động offline hoàn toàn}: Không cần kết nối Internet sau khi triển khai
+    \item \textbf{Bảo mật dữ liệu}: Dữ liệu không rời khỏi mạng nội bộ đơn vị
+\end{enumerate}
+
+\subsection{Phạm vi triển khai}
+
+\begin{table}[H]
+\centering
+\caption{Phạm vi triển khai}
+\renewcommand{\arraystretch}{1.4}
+\begin{tabularx}{\textwidth}{|l|X|}
+\hline
+\rowcolor{primaryblue!10}
+\textbf{Tiêu chí} & \textbf{Chi tiết} \\
+\hline
+Số lượng người dùng & 100 người \\
+\hline
+Số lượng Server & 1 máy chủ GPU chuyên dụng \\
+\hline
+Ngôn ngữ hỗ trợ & 55 ngôn ngữ (Ả Rập, Việt, Anh, Trung, Nhật, Hàn, v.v.) \\
+\hline
+Loại triển khai & Offline -- Mạng nội bộ (LAN) \\
+\hline
+Thời gian dự kiến & 4--6 tuần \\
+\hline
+\end{tabularx}
+\end{table}
+
+% ============================================================================
+%                     PHẦN 2: KẾ HOẠCH THỜI GIAN
+% ============================================================================
+\newpage
+\section{Kế hoạch thời gian (Timeline)}
+
+\subsection{Tổng quan các giai đoạn}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+    node distance=0.6cm,
+    phase/.style={
+        rectangle, rounded corners=5pt, draw=primaryblue, thick,
+        fill=blue!8, text width=13cm, minimum height=1.2cm,
+        font=\small
+    },
+    arrow/.style={-{Stealth[length=2mm]}, thick, primaryblue!60}
+]
+
+\node[phase] (p1) {\textbf{Giai đoạn 1: Chuẩn bị} (Tuần 1--2) -- Khảo sát, đặt mua phần cứng, chuẩn bị tài liệu};
+\node[phase, below=of p1] (p2) {\textbf{Giai đoạn 2: Triển khai Server} (Tuần 3) -- Lắp đặt, cài đặt phần mềm, tải mô hình AI};
+\node[phase, below=of p2] (p3) {\textbf{Giai đoạn 3: Đóng gói \& Test} (Tuần 4) -- Đóng gói offline, kiểm thử end-to-end};
+\node[phase, below=of p3] (p4) {\textbf{Giai đoạn 4: Đào tạo} (Tuần 5) -- Đào tạo quản trị viên và người dùng cuối};
+\node[phase, below=of p4] (p5) {\textbf{Giai đoạn 5: Nghiệm thu \& Bàn giao} (Tuần 6) -- Kiểm thử UAT, nghiệm thu, bàn giao};
+
+\draw[arrow] (p1) -- (p2);
+\draw[arrow] (p2) -- (p3);
+\draw[arrow] (p3) -- (p4);
+\draw[arrow] (p4) -- (p5);
+
+\end{tikzpicture}
+\caption{Sơ đồ các giai đoạn triển khai}
+\end{figure}
+
+\subsection{Chi tiết từng giai đoạn}
+
+\subsubsection{Giai đoạn 1: Chuẩn bị (Tuần 1--2)}
+
+\begin{table}[H]
+\centering
+\caption{Các công việc Giai đoạn 1}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{|c|X|c|c|}
+\hline
+\rowcolor{primaryblue!10}
+\textbf{STT} & \textbf{Công việc} & \textbf{Thời gian} & \textbf{Phụ trách} \\
+\hline
+1 & Khảo sát hạ tầng mạng LAN hiện tại & Ngày 1--2 & KTV Mạng \\
+\hline
+2 & Khảo sát phòng đặt Server (điện, nhiệt độ) & Ngày 1--2 & KTV Hạ tầng \\
+\hline
+3 & Lập danh sách phần cứng cần mua & Ngày 3 & Quản lý dự án \\
+\hline
+4 & Phê duyệt ngân sách và đặt mua & Ngày 4--7 & Ban lãnh đạo \\
+\hline
+5 & Chuẩn bị tài liệu hướng dẫn sử dụng & Ngày 7--14 & Đội triển khai \\
+\hline
+6 & Nhận và kiểm tra phần cứng & Ngày 10--14 & KTV Phần cứng \\
+\hline
+\end{tabularx}
+\end{table}
+
+\subsubsection{Giai đoạn 2: Triển khai Server (Tuần 3)}
+
+\begin{table}[H]
+\centering
+\caption{Các công việc Giai đoạn 2}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{|c|X|c|c|}
+\hline
+\rowcolor{primaryblue!10}
+\textbf{STT} & \textbf{Công việc} & \textbf{Thời gian} & \textbf{Phụ trách} \\
+\hline
+1 & Lắp đặt Server tại phòng máy & Ngày 1 & KTV Phần cứng \\
+\hline
+2 & Cài đặt hệ điều hành (Ubuntu/Windows Server) & Ngày 1--2 & KTV Hệ thống \\
+\hline
+3 & Cài đặt NVIDIA Driver + CUDA Toolkit & Ngày 2 & KTV Hệ thống \\
+\hline
+4 & Cài đặt Python, PyTorch, Dependencies & Ngày 2--3 & KTV Phần mềm \\
+\hline
+5 & Tải mô hình TranslateGemma từ Hugging Face & Ngày 3--4 & KTV Phần mềm \\
+\hline
+6 & Cấu hình mạng, firewall, IP tĩnh & Ngày 4--5 & KTV Mạng \\
+\hline
+7 & Khởi chạy và kiểm tra Server hoạt động & Ngày 5--7 & Đội triển khai \\
+\hline
+\end{tabularx}
+\end{table}
+
+\subsubsection{Giai đoạn 3: Đóng gói \& Kiểm thử (Tuần 4)}
+
+\begin{table}[H]
+\centering
+\caption{Các công việc Giai đoạn 3}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{|c|X|c|c|}
+\hline
+\rowcolor{primaryblue!10}
+\textbf{STT} & \textbf{Công việc} & \textbf{Thời gian} & \textbf{Phụ trách} \\
+\hline
+1 & Build Frontend và cấu hình API URL & Ngày 1 & KTV Phần mềm \\
+\hline
+2 & Đóng gói Offline Package (nếu cần) & Ngày 1--2 & KTV Phần mềm \\
+\hline
+3 & Kiểm thử dịch CSV với dữ liệu mẫu & Ngày 2--3 & QA/Tester \\
+\hline
+4 & Kiểm thử dịch văn bản và OCR & Ngày 3--4 & QA/Tester \\
+\hline
+5 & Kiểm thử với 10--20 người dùng đồng thời & Ngày 4--5 & Đội triển khai \\
+\hline
+6 & Sửa lỗi và tối ưu hiệu năng & Ngày 5--7 & KTV Phần mềm \\
+\hline
+\end{tabularx}
+\end{table}
+
+\subsubsection{Giai đoạn 4: Đào tạo (Tuần 5)}
+
+\begin{table}[H]
+\centering
+\caption{Các công việc Giai đoạn 4}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{|c|X|c|c|}
+\hline
+\rowcolor{primaryblue!10}
+\textbf{STT} & \textbf{Công việc} & \textbf{Thời gian} & \textbf{Phụ trách} \\
+\hline
+1 & Đào tạo Quản trị viên (2--3 người) & Ngày 1--2 & Đội triển khai \\
+\hline
+2 & Đào tạo người dùng cuối (đợt 1: 50 người) & Ngày 3--4 & Đào tạo viên \\
+\hline
+3 & Đào tạo người dùng cuối (đợt 2: 50 người) & Ngày 5--6 & Đào tạo viên \\
+\hline
+4 & Hỗ trợ giải đáp thắc mắc & Ngày 6--7 & Đội triển khai \\
+\hline
+\end{tabularx}
+\end{table}
+
+\subsubsection{Giai đoạn 5: Nghiệm thu \& Bàn giao (Tuần 6)}
+
+\begin{table}[H]
+\centering
+\caption{Các công việc Giai đoạn 5}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{|c|X|c|c|}
+\hline
+\rowcolor{primaryblue!10}
+\textbf{STT} & \textbf{Công việc} & \textbf{Thời gian} & \textbf{Phụ trách} \\
+\hline
+1 & Kiểm thử UAT với đại diện các phòng ban & Ngày 1--3 & QA + Đơn vị \\
+\hline
+2 & Hoàn thiện tài liệu bàn giao & Ngày 3--4 & Đội triển khai \\
+\hline
+3 & Họp nghiệm thu và ký biên bản & Ngày 5 & Các bên liên quan \\
+\hline
+4 & Bàn giao và kết thúc dự án & Ngày 6--7 & Quản lý dự án \\
+\hline
+\end{tabularx}
+\end{table}
+
+% ============================================================================
+%                     PHẦN 3: CHI PHÍ DỰ TOÁN
+% ============================================================================
+\newpage
+\section{Chi phí dự toán}
+
+\subsection{Chi phí phần cứng Server}
+
+\begin{table}[H]
+\centering
+\caption{Dự toán chi phí phần cứng Server GPU -- NVIDIA A100 80GB}
+\renewcommand{\arraystretch}{1.4}
+\begin{tabularx}{\textwidth}{|l|X|c|r|}
+\hline
+\rowcolor{primaryblue!10}
+\textbf{Thành phần} & \textbf{Thông số kỹ thuật} & \textbf{SL} & \textbf{Thành tiền (VNĐ)} \\
+\hline
+\multicolumn{4}{|c|}{\cellcolor{accentgreen!15}\textbf{Cấu hình Production: NVIDIA A100 80GB -- Full Precision BF16}} \\
+\hline
+GPU & NVIDIA A100 80GB PCIe (HBM2e, 2TB/s) & 1 & 450.000.000 \\
+\hline
+CPU & AMD EPYC 7313 (16C/32T, 3.0GHz) & 1 & 55.000.000 \\
+\hline
+Mainboard & Supermicro H12SSL-i (SP3 Socket) & 1 & 25.000.000 \\
+\hline
+RAM & DDR4-3200 ECC REG 128GB (8x16GB) & 1 bộ & 35.000.000 \\
+\hline
+SSD & NVMe Gen4 2TB (Samsung PM9A3 Enterprise) & 1 & 12.000.000 \\
+\hline
+PSU & 1200W 80+ Platinum Redundant & 1 & 8.000.000 \\
+\hline
+Case & 4U Rackmount Server Chassis & 1 & 10.000.000 \\
+\hline
+Cooling & Hệ thống tản nhiệt Server & 1 & 5.000.000 \\
+\hline
+UPS & 3000VA Online Double Conversion & 1 & 25.000.000 \\
+\hline
+\textbf{Tổng chi phí phần cứng} & & & \textbf{625.000.000} \\
+\hline
+\end{tabularx}
+\end{table}
+
+\begin{successbox}[Ưu điểm NVIDIA A100 80GB -- Full Precision]
+\begin{itemize}
+    \item \textbf{VRAM 80GB HBM2e}: Chạy mô hình TranslateGemma-27B với \textbf{Full Precision BF16} -- chất lượng dịch tối ưu nhất
+    \item \textbf{Không cần Quantization}: Không giảm chất lượng do INT8/INT4, giữ nguyên độ chính xác mô hình
+    \item \textbf{Tensor Cores thế hệ 3}: Tăng tốc inference AI lên đến 312 TFLOPS (TF32)
+    \item \textbf{Băng thông 2TB/s}: Giảm bottleneck khi xử lý batch lớn
+    \item \textbf{Thiết kế Datacenter}: Hoạt động 24/7, bảo hành enterprise, độ tin cậy cao
+    \item \textbf{ECC Memory}: Đảm bảo tính toàn vẹn dữ liệu trong quá trình suy luận
+\end{itemize}
+\end{successbox}
+
+\begin{infobox}[So sánh hiệu năng mô hình 27B]
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{|l|c|c|c|}
+\hline
+\rowcolor{primaryblue!10}
+\textbf{GPU} & \textbf{Precision} & \textbf{Tokens/giây} & \textbf{Chất lượng} \\
+\hline
+RTX 4090 (24GB) & INT4 (4-bit) & $\sim$20--35 & Giảm nhẹ \\
+\hline
+RTX A6000 (48GB) & INT8 (8-bit) & $\sim$25--40 & Tốt \\
+\hline
+\textbf{A100 (80GB)} & \textbf{BF16 (Full)} & $\sim$\textbf{40--70} & \textbf{Tối ưu} \\
+\hline
+\end{tabular}
+\end{infobox}
+
+\subsection{Chi phí triển khai và đào tạo}
+
+\begin{table}[H]
+\centering
+\caption{Dự toán chi phí triển khai}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{|l|X|r|}
+\hline
+\rowcolor{primaryblue!10}
+\textbf{Hạng mục} & \textbf{Mô tả} & \textbf{Chi phí (VNĐ)} \\
+\hline
+Triển khai phần mềm & Cài đặt, cấu hình, kiểm thử (2 tuần) & 30.000.000 \\
+\hline
+Đào tạo quản trị viên & 2--3 người, 2 ngày & 5.000.000 \\
+\hline
+Đào tạo người dùng & 100 người, 2 đợt & 10.000.000 \\
+\hline
+Tài liệu hướng dẫn & Biên soạn, in ấn & 3.000.000 \\
+\hline
+Hỗ trợ kỹ thuật ban đầu & 1 tháng sau nghiệm thu & 5.000.000 \\
+\hline
+\textbf{Tổng chi phí triển khai} & & \textbf{53.000.000} \\
+\hline
+\end{tabularx}
+\end{table}
+
+\subsection{Tổng hợp chi phí}
+
+\begin{table}[H]
+\centering
+\caption{Tổng hợp chi phí dự án -- NVIDIA A100 80GB}
+\renewcommand{\arraystretch}{1.4}
+\begin{tabular}{|l|r|}
+\hline
+\rowcolor{primaryblue!10}
+\textbf{Hạng mục} & \textbf{Chi phí (VNĐ)} \\
+\hline
+Phần cứng Server (A100 80GB + hệ thống) & 625.000.000 \\
+\hline
+Triển khai \& Đào tạo & 53.000.000 \\
+\hline
+Dự phòng (10\%) & 67.800.000 \\
+\hline
+\textbf{TỔNG CỘNG} & \textbf{745.800.000} \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{successbox}[Lợi ích đầu tư NVIDIA A100 80GB]
+Với tổng chi phí \textbf{745,8 triệu VNĐ}, đơn vị được:
+\begin{itemize}
+    \item \textbf{Chất lượng dịch tối ưu}: Mô hình 27B chạy Full Precision BF16, không mất độ chính xác
+    \item \textbf{Hiệu năng cao}: 40--70 tokens/giây, xử lý nhanh file CSV lớn
+    \item \textbf{Độ tin cậy enterprise}: GPU datacenter, hoạt động 24/7, bảo hành dài hạn
+    \item \textbf{Không giới hạn VRAM}: 80GB HBM2e đủ cho mọi tình huống sử dụng
+    \item \textbf{Khả năng mở rộng}: Có thể nâng cấp lên multi-GPU hoặc model lớn hơn trong tương lai
+\end{itemize}
+\end{successbox}
+
+% ============================================================================
+%                     PHẦN 4: PHÂN CÔNG NHÂN SỰ
+% ============================================================================
+\newpage
+\section{Phân công nhân sự}
+
+\subsection{Cơ cấu đội dự án}
+
+\begin{table}[H]
+\centering
+\caption{Danh sách nhân sự dự án}
+\renewcommand{\arraystretch}{1.4}
+\begin{tabularx}{\textwidth}{|c|l|X|c|}
+\hline
+\rowcolor{primaryblue!10}
+\textbf{STT} & \textbf{Vai trò} & \textbf{Trách nhiệm} & \textbf{Số lượng} \\
+\hline
+1 & Quản lý dự án (PM) & Điều phối, báo cáo tiến độ, giao tiếp các bên & 1 \\
+\hline
+2 & KTV Phần cứng & Lắp đặt Server, kiểm tra thiết bị & 1 \\
+\hline
+3 & KTV Hệ thống & Cài đặt OS, Driver, CUDA & 1 \\
+\hline
+4 & KTV Phần mềm & Cài đặt ứng dụng, cấu hình, debug & 1--2 \\
+\hline
+5 & KTV Mạng & Cấu hình mạng, firewall, IP & 1 \\
+\hline
+6 & QA/Tester & Kiểm thử chức năng, hiệu năng & 1 \\
+\hline
+7 & Đào tạo viên & Đào tạo người dùng cuối & 1--2 \\
+\hline
+\multicolumn{3}{|r|}{\textbf{Tổng cộng}} & \textbf{8--10 người} \\
+\hline
+\end{tabularx}
+\end{table}
+
+\subsection{Ma trận phân công RACI}
+
+\begin{table}[H]
+\centering
+\caption{Ma trận RACI (R=Responsible, A=Accountable, C=Consulted, I=Informed)}
+\renewcommand{\arraystretch}{1.2}
+\footnotesize
+\begin{tabular}{|l|c|c|c|c|c|c|c|}
+\hline
+\rowcolor{primaryblue!10}
+\textbf{Công việc} & \textbf{PM} & \textbf{HW} & \textbf{SYS} & \textbf{SW} & \textbf{NET} & \textbf{QA} & \textbf{ĐT} \\
+\hline
+Khảo sát hạ tầng & A & R & C & C & R & I & I \\
+\hline
+Đặt mua phần cứng & A/R & C & I & I & I & I & I \\
+\hline
+Lắp đặt Server & A & R & C & I & I & I & I \\
+\hline
+Cài đặt OS/CUDA & A & I & R & C & I & I & I \\
+\hline
+Cài đặt phần mềm & A & I & C & R & I & I & I \\
+\hline
+Cấu hình mạng & A & I & C & I & R & I & I \\
+\hline
+Kiểm thử hệ thống & A & I & C & C & C & R & I \\
+\hline
+Đào tạo người dùng & A & I & I & C & I & I & R \\
+\hline
+Nghiệm thu & A/R & I & I & C & I & C & I \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Yêu cầu từ phía đơn vị}
+
+\begin{table}[H]
+\centering
+\caption{Nhân sự đơn vị cần phối hợp}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{|l|X|c|}
+\hline
+\rowcolor{primaryblue!10}
+\textbf{Vai trò} & \textbf{Trách nhiệm} & \textbf{Số lượng} \\
+\hline
+Đầu mối phối hợp & Điều phối nội bộ, phê duyệt & 1 \\
+\hline
+Quản trị viên IT & Tiếp nhận bàn giao, vận hành hệ thống & 2--3 \\
+\hline
+Đại diện phòng ban & Tham gia UAT, phản hồi yêu cầu & 5--10 \\
+\hline
+\end{tabularx}
+\end{table}
+
+% ============================================================================
+%                     PHẦN 5: KẾ HOẠCH ĐÀO TẠO
+% ============================================================================
+\newpage
+\section{Kế hoạch đào tạo}
+
+\subsection{Đối tượng đào tạo}
+
+\begin{table}[H]
+\centering
+\caption{Phân loại đối tượng đào tạo}
+\renewcommand{\arraystretch}{1.4}
+\begin{tabularx}{\textwidth}{|l|c|X|c|}
+\hline
+\rowcolor{primaryblue!10}
+\textbf{Đối tượng} & \textbf{Số lượng} & \textbf{Mục tiêu đào tạo} & \textbf{Thời lượng} \\
+\hline
+Quản trị viên & 2--3 người & Khởi động/dừng Server, xử lý sự cố, backup, restore & 1 ngày (8h) \\
+\hline
+Người dùng cuối & 100 người & Sử dụng giao diện web dịch CSV, text, OCR & 2 giờ/đợt \\
+\hline
+\end{tabularx}
+\end{table}
+
+\subsection{Nội dung đào tạo Quản trị viên}
+
+\begin{enumerate}[label=\textbf{\arabic*.}, leftmargin=1.5cm]
+    \item \textbf{Kiến trúc hệ thống} (1 giờ)
+    \begin{itemize}
+        \item Mô hình Client--Server
+        \item Các thành phần: Backend (FastAPI), Frontend (React), Model AI
+    \end{itemize}
+    
+    \item \textbf{Vận hành Server} (3 giờ)
+    \begin{itemize}
+        \item Khởi động/dừng dịch vụ Backend
+        \item Kiểm tra trạng thái GPU, RAM, CPU
+        \item Xem log và xử lý lỗi cơ bản
+    \end{itemize}
+    
+    \item \textbf{Xử lý sự cố} (2 giờ)
+    \begin{itemize}
+        \item Server không phản hồi
+        \item Lỗi GPU out of memory
+        \item Lỗi mạng/kết nối
+    \end{itemize}
+    
+    \item \textbf{Backup và Restore} (2 giờ)
+    \begin{itemize}
+        \item Backup model cache
+        \item Backup cấu hình
+        \item Khôi phục khi cần
+    \end{itemize}
+\end{enumerate}
+
+\subsection{Nội dung đào tạo Người dùng cuối}
+
+\begin{enumerate}[label=\textbf{\arabic*.}, leftmargin=1.5cm]
+    \item \textbf{Truy cập hệ thống} (15 phút)
+    \begin{itemize}
+        \item URL truy cập (VD: \texttt{http://192.168.x.x:8000})
+        \item Không cần đăng nhập
+    \end{itemize}
+    
+    \item \textbf{Dịch file CSV} (45 phút)
+    \begin{itemize}
+        \item Chuẩn bị file CSV đúng định dạng (cột ``Text'')
+        \item Upload file và chọn ngôn ngữ nguồn/đích
+        \item Theo dõi tiến trình và tải file kết quả
+    \end{itemize}
+    
+    \item \textbf{Dịch văn bản trực tiếp} (30 phút)
+    \begin{itemize}
+        \item Nhập văn bản cần dịch
+        \item Chọn ngôn ngữ và nhấn Dịch
+        \item Copy kết quả
+    \end{itemize}
+    
+    \item \textbf{Dịch từ ảnh (OCR)} (30 phút)
+    \begin{itemize}
+        \item Upload ảnh chứa văn bản
+        \item Hệ thống nhận dạng và dịch tự động
+    \end{itemize}
+\end{enumerate}
+
+\subsection{Tài liệu đào tạo}
+
+\begin{itemize}
+    \item Sổ tay Quản trị viên (PDF, 20--30 trang)
+    \item Hướng dẫn sử dụng nhanh (PDF, 5--10 trang)
+    \item Video hướng dẫn (10--15 phút)
+    \item FAQ -- Câu hỏi thường gặp
+\end{itemize}
+
+% ============================================================================
+%                     PHẦN 6: ĐÁNH GIÁ RỦI RO
+% ============================================================================
+\newpage
+\section{Đánh giá rủi ro và phương án dự phòng}
+
+\subsection{Ma trận rủi ro}
+
+\begin{table}[H]
+\centering
+\caption{Ma trận đánh giá rủi ro (Xác suất × Tác động)}
+\renewcommand{\arraystretch}{1.4}
+\footnotesize
+\begin{tabularx}{\textwidth}{|c|X|c|c|c|X|}
+\hline
+\rowcolor{primaryblue!10}
+\textbf{ID} & \textbf{Rủi ro} & \textbf{XS} & \textbf{TĐ} & \textbf{Mức} & \textbf{Phương án giảm thiểu} \\
+\hline
+R1 & Chậm giao hàng phần cứng GPU & TB & Cao & \cellcolor{warningorange!30}Cao & Đặt hàng sớm, có nhà cung cấp dự phòng \\
+\hline
+R2 & GPU lỗi hoặc không tương thích & Thấp & Cao & \cellcolor{yellow!30}TB & Kiểm tra kỹ trước khi mua, bảo hành \\
+\hline
+R3 & Mô hình AI quá nặng, thiếu VRAM & TB & Cao & \cellcolor{warningorange!30}Cao & Sử dụng quantization 4-bit, chọn model 4B \\
+\hline
+R4 & Mạng LAN không ổn định & Thấp & TB & \cellcolor{green!20}Thấp & Kiểm tra và nâng cấp mạng trước \\
+\hline
+R5 & Người dùng khó tiếp cận công nghệ & TB & Thấp & \cellcolor{green!20}Thấp & Đào tạo kỹ, tài liệu đơn giản \\
+\hline
+R6 & Mất điện đột ngột & Thấp & Cao & \cellcolor{yellow!30}TB & UPS, generator dự phòng \\
+\hline
+R7 & Nhân sự triển khai không đủ & Thấp & TB & \cellcolor{green!20}Thấp & Lên kế hoạch nhân sự sớm \\
+\hline
+R8 & Bảo mật: Truy cập trái phép & Thấp & Cao & \cellcolor{yellow!30}TB & Firewall, chỉ mở trong LAN, không public \\
+\hline
+\end{tabularx}
+\end{table}
+
+\textbf{Chú thích:} XS = Xác suất, TĐ = Tác động, TB = Trung bình
+
+\subsection{Phương án dự phòng chi tiết}
+
+\subsubsection{R1: Chậm giao hàng GPU}
+
+\begin{itemize}
+    \item \textbf{Phòng ngừa}: Đặt hàng ngay từ tuần 1, liên hệ 2--3 nhà cung cấp
+    \item \textbf{Xử lý}: Nếu chậm > 1 tuần, sử dụng GPU cloud tạm thời (AWS, GCP)
+    \item \textbf{Trách nhiệm}: Quản lý dự án
+\end{itemize}
+
+\subsubsection{R3: Thiếu VRAM cho mô hình AI}
+
+\begin{itemize}
+    \item \textbf{Phòng ngừa}: Chọn GPU đủ VRAM (RTX A6000 48GB)
+    \item \textbf{Xử lý}: Chuyển sang model 4B (thay vì 27B), sử dụng quantization 4-bit
+    \item \textbf{Tác động}: Chất lượng dịch giảm nhẹ nhưng vẫn hoạt động
+\end{itemize}
+
+\subsubsection{R6: Mất điện đột ngột}
+
+\begin{itemize}
+    \item \textbf{Phòng ngừa}: UPS 1500VA, duy trì 15--20 phút để shutdown an toàn
+    \item \textbf{Xử lý}: Nếu mất điện kéo dài, thông báo người dùng dừng sử dụng
+    \item \textbf{Khuyến nghị}: Đơn vị có hệ thống generator dự phòng
+\end{itemize}
+
+% ============================================================================
+%                     PHẦN 7: VẬN HÀNH VÀ BẢO TRÌ
+% ============================================================================
+\newpage
+\section{Kế hoạch vận hành và bảo trì}
+
+\subsection{Vận hành hàng ngày}
+
+\begin{table}[H]
+\centering
+\caption{Checklist vận hành hàng ngày}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{|c|X|c|}
+\hline
+\rowcolor{primaryblue!10}
+\textbf{STT} & \textbf{Công việc} & \textbf{Tần suất} \\
+\hline
+1 & Kiểm tra Server đang hoạt động (truy cập web) & Mỗi sáng \\
+\hline
+2 & Kiểm tra nhiệt độ GPU (< 80°C khi hoạt động) & 1 lần/ngày \\
+\hline
+3 & Kiểm tra dung lượng ổ cứng (thư mục uploads/outputs) & 1 lần/ngày \\
+\hline
+4 & Xóa file tạm cũ (> 7 ngày) & Hàng tuần \\
+\hline
+\end{tabularx}
+\end{table}
+
+\subsection{Bảo trì định kỳ}
+
+\begin{table}[H]
+\centering
+\caption{Lịch bảo trì định kỳ}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{|l|X|c|}
+\hline
+\rowcolor{primaryblue!10}
+\textbf{Tần suất} & \textbf{Công việc} & \textbf{Phụ trách} \\
+\hline
+Hàng tuần & Backup cấu hình hệ thống & Quản trị viên \\
+\hline
+Hàng tháng & Cập nhật OS security patches & Quản trị viên \\
+\hline
+Hàng tháng & Kiểm tra log lỗi, tối ưu hiệu năng & Quản trị viên \\
+\hline
+Hàng quý & Vệ sinh Server (bụi, quạt, keo tản nhiệt) & KTV Phần cứng \\
+\hline
+Hàng năm & Đánh giá nâng cấp phần cứng/phần mềm & Đội CNTT \\
+\hline
+\end{tabularx}
+\end{table}
+
+\subsection{Hỗ trợ kỹ thuật}
+
+\begin{itemize}
+    \item \textbf{Hỗ trợ cấp 1} (Quản trị viên nội bộ): Xử lý các sự cố cơ bản, khởi động lại dịch vụ
+    \item \textbf{Hỗ trợ cấp 2} (Đội triển khai): Hỗ trợ từ xa cho các sự cố phức tạp (miễn phí 1 tháng sau nghiệm thu)
+    \item \textbf{Hỗ trợ mở rộng}: Hợp đồng bảo trì hàng năm (nếu cần)
+\end{itemize}
+
+% ============================================================================
+%                     PHẦN 8: KẾT LUẬN
+% ============================================================================
+\newpage
+\section{Kết luận}
+
+\subsection{Tóm tắt kế hoạch}
+
+\begin{table}[H]
+\centering
+\caption{Tóm tắt kế hoạch triển khai}
+\renewcommand{\arraystretch}{1.4}
+\begin{tabularx}{\textwidth}{|l|X|}
+\hline
+\rowcolor{primaryblue!10}
+\textbf{Tiêu chí} & \textbf{Nội dung} \\
+\hline
+Thời gian triển khai & 6 tuần \\
+\hline
+Tổng ngân sách & 745.800.000 VNĐ \\
+\hline
+GPU Server & NVIDIA A100 80GB -- Full Precision BF16 \\
+\hline
+Nhân sự triển khai & 8--10 người \\
+\hline
+Số người dùng & 100 người \\
+\hline
+Mô hình AI & TranslateGemma-27B (Full Precision) \\
+\hline
+\end{tabularx}
+\end{table}
+
+\subsection{Các bước tiếp theo}
+
+\begin{enumerate}[label=\arabic*., leftmargin=1.5cm]
+    \item Phê duyệt kế hoạch và ngân sách
+    \item Đặt mua phần cứng GPU Server
+    \item Thành lập đội dự án và kick-off meeting
+    \item Bắt đầu Giai đoạn 1: Chuẩn bị
+\end{enumerate}
+
+\subsection{Thông tin liên hệ}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|l|l|}
+\hline
+\rowcolor{primaryblue!10}
+\textbf{Vai trò} & \textbf{Thông tin} \\
+\hline
+Quản lý dự án & [Tên] -- [Email] -- [SĐT] \\
+\hline
+Kỹ thuật trưởng & [Tên] -- [Email] -- [SĐT] \\
+\hline
+\end{tabular}
+\end{table}
+
+\vspace{1cm}
+\begin{center}
+\rule{0.5\textwidth}{0.5pt}\\[0.5cm]
+\textbf{--- HẾT ---}
+\end{center}
+
+\end{document}

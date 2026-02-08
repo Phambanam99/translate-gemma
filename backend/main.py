@@ -62,7 +62,7 @@ def _get_env_int(name: str, default: int, minimum: int = 1) -> int:
 
 CPU_WORKERS = _get_env_int("CSV_CPU_WORKERS", min(8, os.cpu_count() or 4))
 CSV_PREPROCESS_CHUNK_SIZE = _get_env_int("CSV_PREPROCESS_CHUNK_SIZE", 1000, minimum=100)
-CSV_GPU_BATCH_SIZE = _get_env_int("CSV_GPU_BATCH_SIZE", 4, minimum=1)
+CSV_GPU_BATCH_SIZE = _get_env_int("CSV_GPU_BATCH_SIZE", 20, minimum=1)
 
 # Request/Response models
 class TextTranslateRequest(BaseModel):
@@ -145,6 +145,19 @@ def _normalize_texts_parallel(values: List[object]) -> List[str]:
     return normalized
 
 
+def _sanitize_output_text(value: object) -> str:
+    if value is None:
+        return ""
+    text = str(value)
+    if "\n" not in text and "\r" not in text:
+        return text
+    return text.replace("\r\n", " ").replace("\r", " ").replace("\n", " ")
+
+
+def _sanitize_translated_texts(values: List[object]) -> List[str]:
+    return [_sanitize_output_text(value) for value in values]
+
+
 def _process_translation_sync(
     job_id: str,
     input_path: str,
@@ -199,7 +212,7 @@ def _process_translation_sync(
             batch_size=CSV_GPU_BATCH_SIZE,
         )
 
-        df["Text"] = translated
+        df["Text"] = _sanitize_translated_texts(translated)
         output_path = os.path.join(OUTPUT_DIR, f"{job_id}_translated.csv")
         df.to_csv(output_path, sep="|", index=False, encoding="utf-8")
 

@@ -396,7 +396,7 @@ class GemmaTranslationService:
         source_lang: str = "ar",
         target_lang: str = "vi",
         progress_callback=None,
-        batch_size: int = 4,
+        batch_size: int = 20,
         max_new_tokens: int = 256,
     ) -> List[str]:
         """Translate list of texts with TRUE GPU batching.
