@@ -11,6 +11,7 @@ Bypasses HF pipeline() to call model.generate() directly for:
 import base64
 import math
 import os
+import tempfile
 import threading
 import time
 from io import BytesIO
@@ -249,28 +250,23 @@ class GemmaTranslationService:
 
     @torch.inference_mode()
     def _generate_from_image(
-        self, messages: list, images: list, max_new_tokens: int
+        self, messages: list, max_new_tokens: int
     ) -> str:
-        """Same as _generate_text but with image inputs."""
+        """Generate translation from image using apply_chat_template.
+
+        Following the official HuggingFace example:
+        The image URL/path is embedded in the messages and
+        apply_chat_template handles image loading + processing.
+        """
         self._ensure_loaded()
         with self._gpu_lock:
             inputs = self._processor.apply_chat_template(
                 messages,
-                add_generation_prompt=True,
                 tokenize=True,
+                add_generation_prompt=True,
                 return_dict=True,
                 return_tensors="pt",
-            )
-            # Process images
-            image_inputs = self._processor.image_processor(
-                images=images, return_tensors="pt"
-            )
-            inputs.update(image_inputs)
-
-            inputs = {
-                k: v.to(self._model.device) if hasattr(v, "to") else v
-                for k, v in inputs.items()
-            }
+            ).to(self._model.device, dtype=torch.bfloat16)
 
             input_len = inputs["input_ids"].shape[-1]
 
@@ -510,9 +506,15 @@ class GemmaTranslationService:
         max_image_side: int = 1024,
         jpeg_quality: int = 90,
     ) -> str:
-        """Extract and translate text from an image."""
+        """Extract and translate text from an image.
 
-        def _resize(image_bytes: bytes) -> bytes:
+        Following the official TranslateGemma usage: the image URL/path
+        is passed inside the message content and apply_chat_template
+        handles all image loading and processing.
+        """
+
+        def _resize_and_save(image_bytes: bytes, path: str) -> None:
+            """Resize image and save to a temporary file."""
             with Image.open(BytesIO(image_bytes)) as im:
                 im = im.convert("RGB")
                 w, h = im.size
@@ -524,45 +526,50 @@ class GemmaTranslationService:
                         new_h = max_image_side
                         new_w = int(w * (max_image_side / h))
                     im = im.resize((new_w, new_h), Image.BICUBIC)
-                out = BytesIO()
-                im.save(out, format="JPEG", quality=jpeg_quality, optimize=True)
-                return out.getvalue()
+                im.save(path, format="JPEG", quality=jpeg_quality, optimize=True)
 
-        # Load + resize image
+        tmp_path = None
         try:
+            # Download / decode image, resize, save to temp file
             if image_source.startswith(("http://", "https://")):
                 resp = requests.get(image_source, timeout=30)
                 resp.raise_for_status()
                 raw_bytes = resp.content
             else:
                 raw_bytes = base64.b64decode(image_source)
-            resized = _resize(raw_bytes)
-            pil_image = Image.open(BytesIO(resized)).convert("RGB")
-        except Exception as e:
-            print(f"[Gemma] Image load/resize failed: {e}")
-            return f"[Error: could not load image: {e}]"
 
-        messages = [
-            {
-                "role": "user",
-                "content": [
-                    {
-                        "type": "image",
-                        "source_lang_code": source_lang,
-                        "target_lang_code": target_lang,
-                    },
-                ],
-            }
-        ]
+            fd, tmp_path = tempfile.mkstemp(suffix=".jpg")
+            os.close(fd)
+            _resize_and_save(raw_bytes, tmp_path)
 
-        try:
+            # Official TranslateGemma message format with image URL
+            messages = [
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "image",
+                            "source_lang_code": source_lang,
+                            "target_lang_code": target_lang,
+                            "url": tmp_path,
+                        },
+                    ],
+                }
+            ]
+
             return self._generate_from_image(
-                messages, [pil_image], max_new_tokens=max_new_tokens
+                messages, max_new_tokens=max_new_tokens
             )
         except Exception as e:
             print(f"[Gemma] Image translation error: {e}")
             self._reset_cuda()
             return f"[Error: {e}]"
+        finally:
+            if tmp_path and os.path.exists(tmp_path):
+                try:
+                    os.unlink(tmp_path)
+                except OSError:
+                    pass
 
 
 # ------------------------------------------------------------------

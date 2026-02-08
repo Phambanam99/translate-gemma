@@ -11,12 +11,14 @@
 **/.my-env/
 **/venv/
 **/env/
-
+**/.venv/
+**/.env.**
+.env.docker # specific env file for docker-compose
 # Frontend artifacts
 **/node_modules/
 **/dist/
 **/dist-ssr/
-
+model_cache/
 # Backend runtime artifacts
 backend/uploads/
 backend/outputs/
